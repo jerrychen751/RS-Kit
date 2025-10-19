@@ -1,0 +1,9 @@
+# Ignore planning and design documentation
+*.md
+planning/
+plans/
+designs/
+notes/
+
+__pycache__/
+.DS_Store
