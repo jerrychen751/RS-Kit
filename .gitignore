@@ -1,8 +1,7 @@
 # Ignore planning and design documentation
-*.md
-planning/
-plans/
-designs/
+# *.md
+# planning/
+
 notes/
 
 __pycache__/
