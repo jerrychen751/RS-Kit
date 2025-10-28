@@ -213,7 +213,7 @@ class TestRegistryCredentialManagerIntegration:
         
         # Act - List credentials
         self.mock_keyring.get_password.return_value = json.dumps([source])
-        listed_sources = self.credential_manager.list_credentials()
+        listed_sources = self.credential_manager.list_added_credentials()
         
         # Act - Remove credentials
         self.mock_keyring.get_password.return_value = json.dumps([source])
@@ -246,7 +246,7 @@ class TestRegistryCredentialManagerIntegration:
         
         # Act - List all sources
         self.mock_keyring.get_password.return_value = json.dumps([source for source, _ in sources_and_credentials])
-        listed_sources = self.credential_manager.list_credentials()
+        listed_sources = self.credential_manager.list_added_credentials()
         
         # Assert
         assert len(listed_sources) == 3
@@ -357,7 +357,7 @@ class TestRegistryCredentialManagerIntegration:
         # Act - Perform multiple operations
         self.credential_manager.add_credential(source, **credentials)
         self.credential_manager.get_credential(source)
-        self.credential_manager.list_credentials()
+        self.credential_manager.list_added_credentials()
         
         # Assert - Verify that operations don't create unnecessary objects
         # This is tested implicitly by the successful completion without memory issues
