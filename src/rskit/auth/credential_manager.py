@@ -24,7 +24,7 @@ class CredentialManager:
             **credentials: Credential key-value pairs.
         """
         # Validate the data source and credentials against registered data plugins
-        matched_source = registry.match_source_name(source)
+        matched_source = registry._match_source_name(source)
         if matched_source != source:
             print(f"Warning: '{source}' is not supported. Adding credential for '{matched_source}'.")
         
@@ -33,7 +33,7 @@ class CredentialManager:
         # Store and update registry
         keyring.set_password(CredentialManager.SERVICE_NAME, source, json.dumps(credentials))
 
-        sources = CredentialManager.list_credentials()
+        sources = CredentialManager.list_added_credentials()
         sources.append(source)
         CredentialManager._update_stored_sources(sorted(sources))
     
@@ -47,7 +47,7 @@ class CredentialManager:
         Returns:
             Optional[Dict[str, Any]]: Credentials dict or None if not found.
         """
-        matched_source = registry.match_source_name(source)
+        matched_source = registry._match_source_name(source)
         if matched_source != source:
             print(f"Warning: '{source}' is not supported. Getting credentials for '{matched_source}'.")
         
@@ -61,18 +61,18 @@ class CredentialManager:
         Args:
             source (str): Data source identifier.
         """
-        matched_source = registry.match_source_name(source)
+        matched_source = registry._match_source_name(source)
         if matched_source != source:
             print(f"Warning: '{source}' is not supported. Did you want to remove the credential for '{matched_source}'?")
             print("No credential was deleted. Please specify the exact source name to delete.")
         else:
             keyring.delete_password(CredentialManager.SERVICE_NAME, source)
-            sources = CredentialManager.list_credentials()
+            sources = CredentialManager.list_added_credentials()
             sources.remove(source)
             CredentialManager._update_stored_sources(sorted(sources))
 
     @staticmethod
-    def list_credentials() -> List[str]:
+    def list_added_credentials() -> List[str]:
         """List all stored data source identifiers.
         
         Returns:
@@ -98,7 +98,7 @@ class CredentialManager:
         Raises:
             ValueError: If required credential fields are missing, the number of provided fields does not match the required fields, or the plugin does not define an authentication schema.
         """
-        plugin_class = registry.match_plugin_class(source)
+        plugin_class = registry._match_plugin_class(source)
         plugin_instance = plugin_class()
 
         if hasattr(plugin_instance, 'get_auth_schema'):

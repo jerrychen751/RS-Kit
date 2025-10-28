@@ -44,20 +44,20 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         self.credential_manager.add_credential(source, **credentials)
         
         # Assert
-        self.mock_registry.match_source_name.assert_called_once_with(source)
+        self.mock_registry._match_source_name.assert_called_once_with(source)
         # Verify set_password is called twice: once for credentials, once for sources registry
         assert self.mock_keyring.set_password.call_count == 2
         # Verify the first call is for credentials
@@ -73,21 +73,21 @@ class TestCredentialManager:
         input_source = "nasa_earth"
         matched_source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = matched_source
+        self.mock_registry._match_source_name.return_value = matched_source
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         with patch('builtins.print') as mock_print:
             self.credential_manager.add_credential(input_source, **credentials)
         
         # Assert
-        self.mock_registry.match_source_name.assert_called_once_with(input_source)
+        self.mock_registry._match_source_name.assert_called_once_with(input_source)
         mock_print.assert_called_once_with(f"Warning: '{input_source}' is not supported. Adding credential for '{matched_source}'.")
         # Verify set_password is called twice: once for credentials, once for sources registry
         assert self.mock_keyring.set_password.call_count == 2
@@ -103,14 +103,14 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass"}  # Missing token
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance with auth schema requiring token
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -124,14 +124,14 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token", "extra": "field"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance with auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -144,12 +144,12 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance without auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.side_effect = AttributeError("No auth schema")
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
@@ -162,7 +162,7 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = json.dumps(credentials)
         
         # Act
@@ -170,7 +170,7 @@ class TestCredentialManager:
         
         # Assert
         assert result == credentials
-        self.mock_registry.match_source_name.assert_called_once_with(source)
+        self.mock_registry._match_source_name.assert_called_once_with(source)
         self.mock_keyring.get_password.assert_called_once_with(
             self.credential_manager.SERVICE_NAME, 
             source
@@ -182,7 +182,7 @@ class TestCredentialManager:
         input_source = "nasa_earth"
         matched_source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = matched_source
+        self.mock_registry._match_source_name.return_value = matched_source
         self.mock_keyring.get_password.return_value = json.dumps(credentials)
         
         # Act
@@ -191,7 +191,7 @@ class TestCredentialManager:
         
         # Assert
         assert result == credentials
-        self.mock_registry.match_source_name.assert_called_once_with(input_source)
+        self.mock_registry._match_source_name.assert_called_once_with(input_source)
         mock_print.assert_called_once_with(f"Warning: '{input_source}' is not supported. Getting credentials for '{matched_source}'.")
         self.mock_keyring.get_password.assert_called_once_with(
             self.credential_manager.SERVICE_NAME, 
@@ -202,7 +202,7 @@ class TestCredentialManager:
         """Test getting credentials when not found returns None."""
         # Arrange
         source = "nasa_earthdata"
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = None
         
         # Act
@@ -215,7 +215,7 @@ class TestCredentialManager:
         """Test getting credentials with invalid JSON raises JSONDecodeError."""
         # Arrange
         source = "nasa_earthdata"
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = "invalid json"
         
         # Act & Assert
@@ -226,14 +226,14 @@ class TestCredentialManager:
         """Test removing credentials with exact source match."""
         # Arrange
         source = "nasa_earthdata"
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = json.dumps([source])
         
         # Act
         self.credential_manager.remove_credential(source)
         
         # Assert
-        self.mock_registry.match_source_name.assert_called_once_with(source)
+        self.mock_registry._match_source_name.assert_called_once_with(source)
         self.mock_keyring.delete_password.assert_called_once_with(
             self.credential_manager.SERVICE_NAME, 
             source
@@ -244,14 +244,14 @@ class TestCredentialManager:
         # Arrange
         input_source = "nasa_earth"
         matched_source = "nasa_earthdata"
-        self.mock_registry.match_source_name.return_value = matched_source
+        self.mock_registry._match_source_name.return_value = matched_source
         
         # Act
         with patch('builtins.print') as mock_print:
             self.credential_manager.remove_credential(input_source)
         
         # Assert
-        self.mock_registry.match_source_name.assert_called_once_with(input_source)
+        self.mock_registry._match_source_name.assert_called_once_with(input_source)
         # Verify both warning messages are printed
         assert mock_print.call_count == 2
         mock_print.assert_any_call(f"Warning: '{input_source}' is not supported. Did you want to remove the credential for '{matched_source}'?")
@@ -263,7 +263,7 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         sources = ["nasa_earthdata", "aviso_altimetry"]
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = json.dumps(sources)
         
         # Act
@@ -283,7 +283,7 @@ class TestCredentialManager:
         self.mock_keyring.get_password.return_value = None
         
         # Act
-        result = self.credential_manager.list_credentials()
+        result = self.credential_manager.list_added_credentials()
         
         # Assert
         assert result == []
@@ -295,7 +295,7 @@ class TestCredentialManager:
         self.mock_keyring.get_password.return_value = json.dumps(sources)
         
         # Act
-        result = self.credential_manager.list_credentials()
+        result = self.credential_manager.list_added_credentials()
         
         # Assert
         assert result == sources
@@ -306,7 +306,7 @@ class TestCredentialManager:
         self.mock_keyring.get_password.return_value = "invalid json"
         
         # Act
-        result = self.credential_manager.list_credentials()
+        result = self.credential_manager.list_added_credentials()
         
         # Assert
         assert result == []
@@ -318,7 +318,7 @@ class TestCredentialManager:
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
         existing_sources = ["aviso_altimetry"]
         
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         self.mock_keyring.get_password.return_value = json.dumps(existing_sources)
         
         # Mock plugin instance and auth schema
@@ -326,7 +326,7 @@ class TestCredentialManager:
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         self.credential_manager.add_credential(source, **credentials)
@@ -361,26 +361,26 @@ class TestCredentialManager:
         """Test add_credential with various source names."""
         # Arrange
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = expected_match
+        self.mock_registry._match_source_name.return_value = expected_match
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         self.credential_manager.add_credential(source_name, **credentials)
         
         # Assert
-        self.mock_registry.match_source_name.assert_called_once_with(source_name)
+        self.mock_registry._match_source_name.assert_called_once_with(source_name)
 
     def test_credential_manager_error_handling(self):
         """Test error handling in credential operations."""
         # Arrange
         source = "nasa_earthdata"
-        self.mock_registry.match_source_name.side_effect = ValueError("Unknown source")
+        self.mock_registry._match_source_name.side_effect = ValueError("Unknown source")
         
         # Act & Assert
         with pytest.raises(ValueError):
@@ -395,14 +395,14 @@ class TestCredentialManager:
             "password": "test_pass",
             "token": "test_token"
         }
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         self.credential_manager.add_credential(source, **credentials)
@@ -425,14 +425,14 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         results = []
         
@@ -463,14 +463,14 @@ class TestCredentialManager:
         # Arrange
         source = "nasa_earthdata"
         credentials = {"username": "test_user", "password": "test_pass", "token": "test_token"}
-        self.mock_registry.match_source_name.return_value = source
+        self.mock_registry._match_source_name.return_value = source
         
         # Mock plugin instance and auth schema
         mock_plugin_instance = Mock()
         mock_plugin_instance.get_auth_schema.return_value = {
             "required_fields": ["username", "password", "token"]
         }
-        self.mock_registry.match_plugin_class.return_value.return_value = mock_plugin_instance
+        self.mock_registry._match_plugin_class.return_value.return_value = mock_plugin_instance
         
         # Act
         self.credential_manager.add_credential(source, **credentials)

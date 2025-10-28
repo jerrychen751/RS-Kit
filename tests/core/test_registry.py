@@ -64,79 +64,79 @@ class TestPluginRegistry:
         sources.append("test")
         assert "test" not in test_registry.get_supported_sources()
 
-    def test_match_source_name_exact_match(self):
+    def test__match_source_name_exact_match(self):
         """Test matching exact source names."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
-        assert test_registry.match_source_name("nasa_earthdata") == "nasa_earthdata"
-        assert test_registry.match_source_name("aviso_altimetry") == "aviso_altimetry"
+        assert test_registry._match_source_name("nasa_earthdata") == "nasa_earthdata"
+        assert test_registry._match_source_name("aviso_altimetry") == "aviso_altimetry"
 
-    def test_match_source_name_case_insensitive(self):
+    def test__match_source_name_case_insensitive(self):
         """Test that matching is case insensitive."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
-        assert test_registry.match_source_name("NASA_EARTHDATA") == "nasa_earthdata"
-        assert test_registry.match_source_name("Aviso_Altimetry") == "aviso_altimetry"
-        assert test_registry.match_source_name("NASA EARTHDATA") == "nasa_earthdata"
+        assert test_registry._match_source_name("NASA_EARTHDATA") == "nasa_earthdata"
+        assert test_registry._match_source_name("Aviso_Altimetry") == "aviso_altimetry"
+        assert test_registry._match_source_name("NASA EARTHDATA") == "nasa_earthdata"
 
-    def test_match_source_name_fuzzy_matching(self):
+    def test__match_source_name_fuzzy_matching(self):
         """Test fuzzy matching with typos and variations."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert - Close matches should work
-        assert test_registry.match_source_name("nasa_earth") == "nasa_earthdata"
-        assert test_registry.match_source_name("earthdata") == "nasa_earthdata"
-        assert test_registry.match_source_name("altimetry") == "aviso_altimetry"
+        assert test_registry._match_source_name("nasa_earth") == "nasa_earthdata"
+        assert test_registry._match_source_name("earthdata") == "nasa_earthdata"
+        assert test_registry._match_source_name("altimetry") == "aviso_altimetry"
 
-    def test_match_source_name_no_match(self):
+    def test__match_source_name_no_match(self):
         """Test that unknown sources raise ValueError."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            test_registry.match_source_name("unknown_source")
+            test_registry._match_source_name("unknown_source")
         
         assert "Unknown data source 'unknown_source'" in str(exc_info.value)
         assert "Supported sources are:" in str(exc_info.value)
         assert "nasa_earthdata" in str(exc_info.value)
         assert "aviso_altimetry" in str(exc_info.value)
 
-    def test_match_source_name_poor_match(self):
+    def test__match_source_name_poor_match(self):
         """Test that sources with poor similarity raise ValueError."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            test_registry.match_source_name("xyz")
+            test_registry._match_source_name("xyz")
         
         assert "Unknown data source 'xyz'" in str(exc_info.value)
 
-    def test_match_source_name_empty_string(self):
+    def test__match_source_name_empty_string(self):
         """Test matching empty string."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            test_registry.match_source_name("")
+            test_registry._match_source_name("")
         
         assert "Unknown data source ''" in str(exc_info.value)
 
-    def test_match_source_name_whitespace(self):
+    def test__match_source_name_whitespace(self):
         """Test matching strings with whitespace."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
-        assert test_registry.match_source_name("  nasa_earthdata  ") == "nasa_earthdata"
-        assert test_registry.match_source_name("\taviso_altimetry\n") == "aviso_altimetry"
+        assert test_registry._match_source_name("  nasa_earthdata  ") == "nasa_earthdata"
+        assert test_registry._match_source_name("\taviso_altimetry\n") == "aviso_altimetry"
 
     def test_match_plugin_class_exact_match(self):
         """Test getting plugin class for exact match."""
@@ -144,8 +144,8 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earthdata")
-        aviso_class = test_registry.match_plugin_class("aviso_altimetry")
+        nasa_class = test_registry._match_plugin_class("nasa_earthdata")
+        aviso_class = test_registry._match_plugin_class("aviso_altimetry")
         
         # Assert
         assert nasa_class is not None
@@ -158,8 +158,8 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earth")
-        aviso_class = test_registry.match_plugin_class("altimetry")
+        nasa_class = test_registry._match_plugin_class("nasa_earth")
+        aviso_class = test_registry._match_plugin_class("altimetry")
         
         # Assert
         assert nasa_class is not None
@@ -172,7 +172,7 @@ class TestPluginRegistry:
         
         # Act & Assert
         with pytest.raises(ValueError):
-            test_registry.match_plugin_class("unknown_source")
+            test_registry._match_plugin_class("unknown_source")
 
     def test_match_plugin_class_returns_correct_type(self):
         """Test that match_plugin_class returns correct plugin classes."""
@@ -180,8 +180,8 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earthdata")
-        aviso_class = test_registry.match_plugin_class("aviso_altimetry")
+        nasa_class = test_registry._match_plugin_class("nasa_earthdata")
+        aviso_class = test_registry._match_plugin_class("aviso_altimetry")
         
         # Assert
         assert issubclass(nasa_class, DataSourcePlugin)
@@ -200,10 +200,10 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earthdata")
+        nasa_class = test_registry._match_plugin_class("nasa_earthdata")
         nasa_instance = nasa_class()
         
-        aviso_class = test_registry.match_plugin_class("aviso_altimetry")
+        aviso_class = test_registry._match_plugin_class("aviso_altimetry")
         aviso_instance = aviso_class()
         
         # Assert
@@ -218,11 +218,11 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earthdata")
+        nasa_class = test_registry._match_plugin_class("nasa_earthdata")
         nasa_instance = nasa_class()
         nasa_schema = nasa_instance.get_auth_schema()
         
-        aviso_class = test_registry.match_plugin_class("aviso_altimetry")
+        aviso_class = test_registry._match_plugin_class("aviso_altimetry")
         aviso_instance = aviso_class()
         aviso_schema = aviso_instance.get_auth_schema()
         
@@ -243,11 +243,11 @@ class TestPluginRegistry:
         test_registry = PluginRegistry()
         
         # Act
-        nasa_class = test_registry.match_plugin_class("nasa_earthdata")
+        nasa_class = test_registry._match_plugin_class("nasa_earthdata")
         nasa_instance = nasa_class()
         nasa_schema = nasa_instance.get_auth_schema()
         
-        aviso_class = test_registry.match_plugin_class("aviso_altimetry")
+        aviso_class = test_registry._match_plugin_class("aviso_altimetry")
         aviso_instance = aviso_class()
         aviso_schema = aviso_instance.get_auth_schema()
         
@@ -271,13 +271,13 @@ class TestPluginRegistry:
         ("AVISO_ALTIMETRY", "aviso_altimetry"),
         ("altimetry", "aviso_altimetry"),
     ])
-    def test_match_source_name_parametrized(self, source_name, expected_match):
+    def test__match_source_name_parametrized(self, source_name, expected_match):
         """Test match_source_name with various inputs."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act
-        result = test_registry.match_source_name(source_name)
+        result = test_registry._match_source_name(source_name)
         
         # Assert
         assert result == expected_match
@@ -287,14 +287,14 @@ class TestPluginRegistry:
         "xyz",
         "random_string",
     ])
-    def test_match_source_name_invalid_parametrized(self, invalid_source):
+    def test__match_source_name_invalid_parametrized(self, invalid_source):
         """Test match_source_name with invalid inputs."""
         # Arrange
         test_registry = PluginRegistry()
         
         # Act & Assert
         with pytest.raises(ValueError):
-            test_registry.match_source_name(invalid_source)
+            test_registry._match_source_name(invalid_source)
 
     def test_registry_immutability(self):
         """Test that registry plugins can be modified externally."""
@@ -322,7 +322,7 @@ class TestPluginRegistry:
         def worker():
             """Worker function for thread testing."""
             try:
-                result = test_registry.match_source_name("nasa_earthdata")
+                result = test_registry._match_source_name("nasa_earthdata")
                 results.append(result)
             except Exception as e:
                 results.append(f"Error: {e}")
@@ -361,7 +361,7 @@ class TestPluginRegistry:
         
         # Act & Assert
         with pytest.raises(ValueError) as exc_info:
-            test_registry.match_source_name("invalid")
+            test_registry._match_source_name("invalid")
         
         error_message = str(exc_info.value)
         assert "Unknown data source 'invalid'" in error_message

@@ -1,7 +1,7 @@
 """Plugin registry for managing data source plugins."""
 
 import difflib
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Type
 
 from ..interfaces.plugin import DataSourcePlugin
 from ..plugins.nasa_earthdata.base import NasaEarthdata
@@ -18,7 +18,7 @@ class PluginRegistry:
             "aviso_altimetry": AvisoAltimetry
         }
 
-    def match_source_name(self, source: str) -> str:
+    def _match_source_name(self, source: str) -> str:
         """Finds the closest matching supported data source.
 
         Args:
@@ -47,8 +47,8 @@ class PluginRegistry:
         matched_source: str = match[0]
         return matched_source
 
-    def match_plugin_class(self, source: str) -> Type[DataSourcePlugin]:
-        """Get the plugin class for a matched source.
+    def _match_plugin_class(self, source: str) -> Type[DataSourcePlugin]:
+        """Get the plugin class for a matched source (internal).
 
         Args:
             source (str): Data source identifier to match.
@@ -59,7 +59,7 @@ class PluginRegistry:
         Raises:
             ValueError: If no supported source closely matches the input source.
         """
-        name = self.match_source_name(source)
+        name = self._match_source_name(source)
         return self._plugins[name]
 
     def get_supported_sources(self) -> List[str]:
@@ -69,6 +69,40 @@ class PluginRegistry:
             List[str]: A copy of the list of supported sources.
         """
         return list(self._plugins.keys())
+
+    def get_auth_schema(self, source: str) -> Dict[str, object]:
+        """Return the authentication schema for a given data source.
+
+        Args:
+            source (str): Data source identifier.
+
+        Returns:
+            Dict[str, object]: Plugin-defined authentication schema.
+
+        Raises:
+            ValueError: If the source is unknown or the plugin does not define an authentication schema.
+        """
+        # Resolve and warn if fuzzy-matched
+        matched_source = self._match_source_name(source)
+        if matched_source != source:
+            print(
+                f"Warning: '{source}' is not supported. Getting auth schema for '{matched_source}'."
+            )
+
+        plugin_class = self._plugins[matched_source]
+        plugin_instance = plugin_class()
+
+        if not hasattr(plugin_instance, "get_auth_schema"):
+            raise ValueError(
+                f"Plugin for source '{source}' does not define an authentication schema."
+            )
+
+        schema = plugin_instance.get_auth_schema()
+        if not isinstance(schema, dict):
+            raise ValueError(
+                f"Authentication schema for source '{source}' must be a dict, got {type(schema).__name__}."
+            )
+        return schema
 
 # Create a singleton instance (assigned/instantiated upon import)
 registry = PluginRegistry()
