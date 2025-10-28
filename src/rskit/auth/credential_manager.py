@@ -34,8 +34,9 @@ class CredentialManager:
         keyring.set_password(CredentialManager.SERVICE_NAME, source, json.dumps(credentials))
 
         sources = CredentialManager.list_added_credentials()
-        sources.append(source)
-        CredentialManager._update_stored_sources(sorted(sources))
+        if source not in sources:
+            sources.append(source)
+            CredentialManager._update_stored_sources(sorted(sources))
     
     @staticmethod
     def get_credential(source: str) -> Optional[Dict[str, Any]]:

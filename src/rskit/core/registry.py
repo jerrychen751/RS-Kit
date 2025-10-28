@@ -3,7 +3,7 @@
 import difflib
 from typing import Dict, List, Type
 
-from ..interfaces.plugin import DataSourcePlugin
+from ..contracts.plugin import DataSourcePlugin
 from ..plugins.nasa_earthdata.base import NasaEarthdata
 from ..plugins.aviso_altimetry.base import AvisoAltimetry
 

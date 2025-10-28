@@ -1,8 +1,8 @@
 """Mock plugins for testing purposes."""
 
 from typing import Dict, Any, Optional
-from rskit.interfaces.plugin import DataSourcePlugin
-from rskit.models.query import Query
+from rskit.contracts.plugin import DataSourcePlugin
+from rskit.core.query_builder import Query
 
 
 class MockNasaEarthdataPlugin(DataSourcePlugin):

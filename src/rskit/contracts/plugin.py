@@ -19,14 +19,14 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Any
 
-from ..models.query import Query
+from ..core.query_builder import Query
 from ..models.data_product import DataProduct
 
 
 class DataSourcePlugin(ABC):
     name: str
+    AUTH_SCHEMA: Dict[str, Any]
 
-    @abstractmethod
     def get_auth_schema(self) -> Dict[str, Any]:
         """Return the credentials schema required for authentication.
 
@@ -34,7 +34,7 @@ class DataSourcePlugin(ABC):
             Dict[str, Any]: A dictionary describing the required authentication parameters
             (e.g., username, password, token) and their properties (such as type, optionality).
         """
-        ...
+        return self.AUTH_SCHEMA
     
     @abstractmethod
     def discover(
