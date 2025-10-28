@@ -7,12 +7,11 @@ A unified toolkit for querying and processing remote sensing data from multiple 
 __version__ = "1.0.0"
 
 # Import main classes for easy access
-from .models.query import Query, SpatialExtent, TemporalExtent
+from . import auth
+from .core.registry import registry
 from .api import query
 
 __all__ = [
-    "Query",
-    "SpatialExtent", 
-    "TemporalExtent",
     "query",
+    "auth",
 ]
