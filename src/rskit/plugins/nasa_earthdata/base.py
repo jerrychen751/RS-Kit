@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 
 from ...contracts.plugin import DataSourcePlugin
-from ...core.query_builder import Query
+from ...core.query import Query
 
 class NasaEarthdata(DataSourcePlugin):
     

@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, Optional
 from rskit.contracts.plugin import DataSourcePlugin
-from rskit.core.query_builder import Query
+from rskit.core.query import Query
 
 
 class MockNasaEarthdataPlugin(DataSourcePlugin):

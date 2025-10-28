@@ -19,7 +19,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Any
 
-from ..core.query_builder import Query
+from ..core.query import Query
 from ..models.data_product import DataProduct
 
 
