@@ -2,20 +2,19 @@
 
 from typing import Dict, Any, Optional
 
-from ...interfaces.plugin import DataSourcePlugin
-from ...models.query import Query
+from ...contracts.plugin import DataSourcePlugin
+from ...core.query_builder import Query
 
 class AvisoAltimetry(DataSourcePlugin):
-
-    def get_auth_schema(self) -> Dict[str, Any]:
-        return {
-            "required_fields": ["ftp_host", "username", "password"],
-            "field_descriptions": {
-                "ftp_host": "AVISO FTP server hostname",
-                "username": "AVISO FTP username",
-                "password": "AVISO FTP password"
-            }
+    
+    AUTH_SCHEMA = {
+        "required_fields": ["ftp_host", "username", "password"],
+        "field_descriptions": {
+            "ftp_host": "AVISO FTP server hostname",
+            "username": "AVISO FTP username",
+            "password": "AVISO FTP password"
         }
+    }
 
     def discover(
         self,
