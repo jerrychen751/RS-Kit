@@ -1,0 +1,32 @@
+# This section tells tools like pip what to use to build your project.
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# This section is the core metadata for your project.
+[project]
+name = "rskit"
+version = "1.0.0"
+description = "A Python data extraction and loading toolkit for scientists and researchers working in remote sensing."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    # Classifiers help users find your project.
+    # Full list: https://pypi.org/classifiers/
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pydantic>=2.12.0",
+    "numpy>=2.3.0",
+    "pandas>=2.3.0",
+    "requests>=2.32.0",
+    "geopandas>=1.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
