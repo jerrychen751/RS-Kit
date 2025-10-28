@@ -1,6 +1,6 @@
 # Ignore planning and design documentation
-# *.md
-# planning/
+*.md
+planning/
 
 notes/
 
