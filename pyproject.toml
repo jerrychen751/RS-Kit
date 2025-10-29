@@ -30,3 +30,14 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+rskit = [
+    "plugins/aviso_altimetry/data/**/*.shp",
+    "plugins/aviso_altimetry/data/**/*.shx",
+    "plugins/aviso_altimetry/data/**/*.dbf",
+    "plugins/aviso_altimetry/data/**/*.prj",
+    "plugins/aviso_altimetry/data/**/*.cpg",
+    "plugins/aviso_altimetry/data/**/*.sbn",
+    "plugins/aviso_altimetry/data/**/*.sbx"
+]
