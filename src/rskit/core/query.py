@@ -2,31 +2,36 @@
 
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Any, Union
+import warnings
+from pathlib import Path
+from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
 import xarray as xr
 from dateutil.parser import parse as parse_date
 
+from .executor import QueryExecutor
+from .registry import registry
 from ..models.extents import SpatialExtent, TemporalExtent
-from .registry import PluginRegistry
 
 
 class Query:
     """Fluent interface for building queries."""
     
-    def __init__(self, registry: Optional[PluginRegistry] = None):
-        """Initialize query builder.
-        
-        Args:
-            registry (Optional[PluginRegistry]): Plugin registry instance.
-        """
-        self._variable: Optional[str] = None
-        self._region: Optional[SpatialExtent] = None
-        self._temporal: Optional[TemporalExtent] = None
-        self._sources: List[str] = []
+    def __init__(self):
+        """Initialize query builder."""
+        self._registry = registry
+
+        # Applies to most or all data sources
+        self._source: Optional[str] = None
+        self._spatial_extent: Optional[SpatialExtent] = None
+        self._temporal_extent: Optional[TemporalExtent] = None
+        self._variable_name: Optional[str] = None
         self._options: Dict[str, Any] = {}
-        self._registry = registry or PluginRegistry()
+
+        # FTP servers
+        self._data_path: Optional[str]
     
+    # Public API methods
     def variable(self, name: str) -> Query:
         """Set the variable to query.
         
@@ -36,23 +41,25 @@ class Query:
         Returns:
             (Query): Query instance for method chaining.
         """
-        self._variable = name
+        self._variable_name = name
+        return self
+
+    def path(self, data_path: str) -> Query:
+        self._data_path = data_path
         return self
     
     def region(
         self,
         lon: Optional[tuple] = None,
         lat: Optional[tuple] = None,
-        bbox: Optional[tuple] = None,
-        **kwargs
+        bbox: Optional[tuple] = None
     ) -> Query:
-        """Set spatial region.
+        """Set spatial region. You can specify either both lon and lat or bbox.
         
         Args:
             lon (Optional[tuple]): (lon_min, lon_max) tuple.
             lat (Optional[tuple]): (lat_min, lat_max) tuple.
             bbox (Optional[tuple]): (lon_min, lat_min, lon_max, lat_max) tuple.
-            **kwargs: Additional arguments for SpatialExtent.
             
         Returns:
             (Query): Query instance for method chaining.
@@ -60,22 +67,20 @@ class Query:
         Raises:
             ValueError: If neither bbox nor both lon and lat are specified.
         """
-        if bbox:
-            # bbox format: (lon_min, lat_min, lon_max, lat_max)
-            self._region = SpatialExtent(
-                lon_min=bbox[0],
-                lat_min=bbox[1], 
-                lon_max=bbox[2],
-                lat_max=bbox[3],
-                **kwargs
-            )
-        elif lon and lat:
-            self._region = SpatialExtent(
+        if lon and lat:
+            self._spatial_extent = SpatialExtent(
                 lon_min=lon[0],
                 lon_max=lon[1],
                 lat_min=lat[0],
-                lat_max=lat[1],
-                **kwargs
+                lat_max=lat[1]
+            )
+        elif bbox:
+            # bbox format: (lon_min, lat_min, lon_max, lat_max)
+            self._spatial_extent = SpatialExtent(
+                lon_min=bbox[0],
+                lat_min=bbox[1], 
+                lon_max=bbox[2],
+                lat_max=bbox[3]
             )
         else:
             raise ValueError("Must specify either bbox or both lon and lat")
@@ -85,15 +90,17 @@ class Query:
     def time(
         self,
         start: Union[str, datetime],
-        end: Union[str, datetime],
-        **kwargs
+        end: Union[str, datetime]
     ) -> Query:
         """Set temporal range.
         
         Args:
-            start (Union[str, datetime]): Start time (flexible string format or datetime).
-            end (Union[str, datetime]): End time (flexible string format or datetime).
-            **kwargs: Additional arguments for TemporalExtent.
+            start (Union[str, datetime]): Start time. Recommended format: "YYYY-MM-DD" 
+                (e.g., "2023-01-15"). For more precision, use "YYYY-MM-DD HH:MM:SS" 
+                (e.g., "2023-01-15 14:30:00") or datetime object.
+            end (Union[str, datetime]): End time. Recommended format: "YYYY-MM-DD" 
+                (e.g., "2023-12-31"). For more precision, use "YYYY-MM-DD HH:MM:SS" 
+                (e.g., "2023-12-31 23:59:59") or datetime object.
             
         Returns:
             (Query): Query instance for method chaining.
@@ -114,31 +121,7 @@ class Query:
             except (ValueError, TypeError) as e:
                 raise ValueError(f"Could not parse end time '{end}': {e}")
             
-        self._temporal = TemporalExtent(start=start, end=end, **kwargs)
-        return self
-    
-    def from_source(self, source: str) -> Query:
-        """Query from a single source.
-        
-        Args:
-            source (str): Data source name (e.g., 'noaa_oisst', 'cmems').
-            
-        Returns:
-            (Query): Query instance for method chaining.
-        """
-        self._sources = [source]
-        return self
-    
-    def from_sources(self, sources: List[str]) -> Query:
-        """Query from multiple sources.
-        
-        Args:
-            sources (List[str]): List of data source names.
-            
-        Returns:
-            (Query): Query instance for method chaining.
-        """
-        self._sources = sources
+        self._temporal_extent = TemporalExtent(start=start, end=end)
         return self
     
     def with_options(self, **options) -> Query:
@@ -152,56 +135,56 @@ class Query:
         """
         self._options.update(options)
         return self
-    
-    # Properties for easy access by plugins
-    @property
-    def variable_name(self) -> Optional[str]:
-        """Get the variable name."""
-        return self._variable
-    
-    @property
-    def spatial(self) -> Optional[SpatialExtent]:
-        """Get the spatial extent."""
-        return self._region
-    
-    @property
-    def temporal(self) -> Optional[TemporalExtent]:
-        """Get the temporal extent."""
-        return self._temporal
-    
-    @property
-    def sources(self) -> List[str]:
-        """Get the data sources."""
-        return self._sources
-    
-    @property
-    def options(self) -> Dict[str, Any]:
-        """Get the query options."""
-        return self._options
-    
-    def execute(self) -> xr.Dataset:
-        """Execute the query.
-        
-        Returns:
-            (xr.Dataset): xarray.Dataset with the requested data.
-            
-        Raises:
-            ValueError: If required fields are missing.
+
+    # Calls methods from executor.py, which delegates to specific plugin-specific implementations
+    def download(
+        self,
+        destination: Optional[Path] = None,
+        *,
+        limit: Optional[int] = None,
+        skip_existing: bool = True,
+    ) -> List[Path]:
+        """Download data for the query via the registered plugin."""
+        executor = QueryExecutor()
+        return executor.download(
+            self,
+            destination=destination,
+            limit=limit,
+            skip_existing=skip_existing,
+        )
+
+    def fetch(
+        self,
+        destination: Optional[Path] = None,
+        *,
+        limit: Optional[int] = None,
+        skip_existing: bool = True,
+        **plugin_kwargs: Any,
+    ) -> xr.Dataset:
+        """Download (if needed) and load data into an xarray Dataset.
+
+        Notes:
+            Additional keyword arguments are forwarded to the active source plugin's
+            `fetch()` implementation. This enables plugin-specific options such as
+            NASA Earthdata Harmony subsetting (e.g., `use_harmony`, `variables`).
         """
-        # Validate required fields
-        if not self._variable:
-            raise ValueError("Variable must be specified")
-        if not self._region:
-            raise ValueError("Spatial region must be specified")
-        if not self._temporal:
-            raise ValueError("Temporal range must be specified")
-        if not self._sources:
-            raise ValueError("At least one data source must be specified")
-        
-        # Execute query using the executor
-        from .executor import QueryExecutor
-        executor = QueryExecutor(self._registry)
-        return executor.execute(self)
+        executor = QueryExecutor()
+        return executor.fetch(
+            self,
+            destination=destination,
+            limit=limit,
+            skip_existing=skip_existing,
+            **plugin_kwargs,
+        )
+
+    def execute(self) -> xr.Dataset:
+        """Deprecated alias for fetch."""
+        warnings.warn(
+            "Query.execute() is deprecated. Use Query.fetch() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.fetch()
     
     def estimate_size(self) -> Optional[int]:
         """Estimate query cost before execution.
@@ -209,6 +192,43 @@ class Query:
         Returns:
             (Optional[int]): Estimated size in bytes, or None if unknown.
         """
-        from .executor import QueryExecutor
-        executor = QueryExecutor(self._registry)
-        return executor.estimate_size(self)
+        # TODO: Implement size estimation
+        return None
+    
+    # Properties (read-only)
+    @property
+    def source(self) -> Optional[str]:
+        return self._source
+    
+    @property
+    def variable_name(self) -> Optional[str]:
+        return self._variable_name
+
+    @property
+    def data_path(self) -> Optional[str]:
+        return self._data_path
+    
+    @property
+    def spatial_extent(self) -> Optional[SpatialExtent]:
+        return self._spatial_extent
+    
+    @property
+    def temporal_extent(self) -> Optional[TemporalExtent]:
+        return self._temporal_extent
+    
+    @property
+    def options(self) -> Dict[str, Any]:
+        return self._options
+    
+    # Private methods
+    def _from_source(self, source: str) -> Query:
+        """Query from a single source.
+        
+        Args:
+            source (str): Data source name (e.g., 'nasa_earthdata', 'aviso_altimetry').
+            
+        Returns:
+            (Query): Query instance for method chaining.
+        """
+        self._source = source
+        return self

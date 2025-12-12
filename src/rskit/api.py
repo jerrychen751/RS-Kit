@@ -13,4 +13,4 @@ def query(source: str) -> Query:
     Returns:
         (Query): Query instance for method chaining.
     """
-    return Query().from_source(source)
+    return Query()._from_source(source)
