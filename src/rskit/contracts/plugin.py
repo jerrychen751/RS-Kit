@@ -17,10 +17,11 @@ Structure:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Any
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+import xarray as xr
 
 from ..core.query import Query
-from ..models.data_product import DataProduct
 
 
 class DataSourcePlugin(ABC):
@@ -35,25 +36,6 @@ class DataSourcePlugin(ABC):
             (e.g., username, password, token) and their properties (such as type, optionality).
         """
         return self.AUTH_SCHEMA
-    
-    @abstractmethod
-    def discover(
-        self,
-        instrument: Optional[str] = None,
-        variable: Optional[str] = None,
-    ) -> str:
-        """Discovers available data products across all instruments matching the specified criteria.
-        
-        Args:
-            instrument (Optional[str]): Instrument name to filter by (e.g., "SWOT", "PACE").
-                If None, returns products from all instruments.
-            variable (Optional[str]): Variable name to filter by (e.g., "sea_surface_temperature").
-                If None, returns all available variables.
-        
-        Returns:
-            str: String representation of available data products.
-        """
-        ...
     
     @abstractmethod
     def supports_variable(self, variable: str) -> bool:
@@ -75,5 +57,35 @@ class DataSourcePlugin(ABC):
             
         Returns:
             (int): Estimated size in bytes, or None if unknown.
+        """
+        ...
+    
+    @abstractmethod
+    def download(
+        self,
+        query: Query,
+        destination: Optional[Path] = None,
+        *,
+        limit: Optional[int] = None,
+        skip_existing: bool = True,
+    ) -> List[Path]:
+        """Download data files for the query.
+        
+        Plugins must implement this to support file downloads. If a source does not
+        provide raw downloads, it should raise NotImplementedError.
+        """
+        ...
+
+    @abstractmethod
+    def fetch(
+        self,
+        query: Query,
+        destination: Optional[Path] = None,
+        *,
+        limit: Optional[int] = None,
+        skip_existing: bool = True,
+        **kwargs: Any,
+    ) -> xr.Dataset:
+        """Fetch data for the given query, downloading if necessary.
         """
         ...
