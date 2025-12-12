@@ -1,0 +1,421 @@
+{
+  "_metadata": {
+    "description": "AVISO SWOT product variable catalog",
+    "ftp_base_path": "/swot_products",
+    "last_updated": "2025-11-29",
+    "structure": "{level}/{product}/{version}/{variant}/cycle_{NNN}/files"
+  },
+  "products": {
+    "SWOT_L3_LR_SSH": {
+      "description": "SWOT Level 3 Low-Rate Sea Surface Height from KaRIn and Nadir",
+      "ftp_path": "l3_karin_nadir/l3_lr_ssh",
+      "versions": ["v1_0", "v1_0_1", "v1_0_2", "v2_0", "v2_0_1", "v3_0"],
+      "variants": ["Basic", "Expert", "Unsmoothed"],
+      "dimensions": {
+        "num_lines": "alongtrack dimension (varies per pass)",
+        "num_pixels": "acrosstrack dimension (69 for KaRIn swath)",
+        "num_nadir": "nadir track dimension"
+      },
+      "coordinates": ["latitude", "longitude"],
+      "variables": {
+        "ssha": {
+          "long_name": "sea surface height anomaly",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssha_noiseless": {
+          "long_name": "sea surface height anomaly without noise",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssha_unedited": {
+          "long_name": "sea surface height anomaly without editing",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "mdt": {
+          "long_name": "mean dynamic topography",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "mss": {
+          "long_name": "mean sea surface height (CNES/CLS)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "dac": {
+          "long_name": "dynamic atmospheric correction",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ocean_tide": {
+          "long_name": "geocentric ocean tide height (FES)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "calibration": {
+          "long_name": "satellite calibration",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "sigma0": {
+          "long_name": "normalized radar cross section (sigma0) from KaRIn",
+          "units": "1",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ugos": {
+          "long_name": "Absolute geostrophic velocity: zonal component",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ugosa": {
+          "long_name": "Geostrophic velocity anomalies: zonal component",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "vgos": {
+          "long_name": "Absolute geostrophic velocity: meridian component",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "vgosa": {
+          "long_name": "Geostrophic velocity anomalies: meridian component",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "quality_flag": {
+          "long_name": "Quality Flag",
+          "units": "",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "uint8"
+        },
+        "cross_track_distance": {
+          "long_name": "cross track distance",
+          "units": "m",
+          "dims": ["num_pixels"],
+          "dtype": "float64"
+        },
+        "time": {
+          "long_name": "time in UTC",
+          "units": "",
+          "dims": ["num_lines"],
+          "dtype": "datetime64[ns]"
+        },
+        "i_num_line": {
+          "long_name": "alongtrack indice of the nearest karin pixel from the nadir data",
+          "units": "count",
+          "dims": ["num_nadir"],
+          "dtype": "int16"
+        },
+        "i_num_pixel": {
+          "long_name": "acrosstrack indice of the nearest karin pixel from the nadir data",
+          "units": "count",
+          "dims": ["num_nadir"],
+          "dtype": "int8"
+        }
+      }
+    },
+    "SWOT_L2_LR_SSH": {
+      "description": "SWOT Level 2 Low-Rate Sea Surface Height from KaRIn",
+      "ftp_path": "l2_karin/l2_lr_ssh",
+      "versions": ["PGC0", "PGD0", "PIC0", "PIC2", "PID0"],
+      "variants": ["Basic", "Expert", "Unsmoothed", "WindWave"],
+      "dimensions": {
+        "num_lines": "alongtrack dimension (varies per pass)",
+        "num_pixels": "acrosstrack dimension (69 for KaRIn swath)",
+        "num_sides": "left/right swath sides (2)"
+      },
+      "coordinates": ["latitude", "longitude"],
+      "variables": {
+        "ssh_karin": {
+          "long_name": "sea surface height",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssh_karin_2": {
+          "long_name": "sea surface height",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssha_karin": {
+          "long_name": "sea surface height anomaly",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssha_karin_2": {
+          "long_name": "sea surface height anomaly",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ssh_karin_uncert": {
+          "long_name": "sea surface height anomaly uncertainty",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "sig0_karin": {
+          "long_name": "normalized radar cross section (sigma0) from KaRIn",
+          "units": "1",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float32"
+        },
+        "sig0_karin_2": {
+          "long_name": "normalized radar cross section (sigma0) from KaRIn",
+          "units": "1",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float32"
+        },
+        "swh_karin": {
+          "long_name": "significant wave height from KaRIn",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "swh_model": {
+          "long_name": "significant wave height from wave model",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "wind_speed_karin": {
+          "long_name": "wind speed from KaRIn",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "wind_speed_karin_2": {
+          "long_name": "wind speed from KaRIn",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "wind_speed_model_u": {
+          "long_name": "u component of model wind",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "wind_speed_model_v": {
+          "long_name": "v component of model wind",
+          "units": "m/s",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "mean_dynamic_topography": {
+          "long_name": "mean dynamic topography",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "mean_sea_surface_cnescls": {
+          "long_name": "mean sea surface height (CNES/CLS)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "mean_sea_surface_dtu": {
+          "long_name": "mean sea surface height (DTU)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "geoid": {
+          "long_name": "geoid height",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "dac": {
+          "long_name": "dynamic atmospheric correction",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ocean_tide_fes": {
+          "long_name": "geocentric ocean tide height (FES)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ocean_tide_got": {
+          "long_name": "geocentric ocean tide height (GOT)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "load_tide_fes": {
+          "long_name": "geocentric load tide height (FES)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "solid_earth_tide": {
+          "long_name": "solid Earth tide height",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "pole_tide": {
+          "long_name": "geocentric pole tide height",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "internal_tide_hret": {
+          "long_name": "coherent internal tide (HRET)",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "sea_state_bias_cor": {
+          "long_name": "sea state bias correction",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "iono_cor_gim_ka": {
+          "long_name": "ionosphere vertical correction",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "model_dry_tropo_cor": {
+          "long_name": "dry troposphere vertical correction",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "model_wet_tropo_cor": {
+          "long_name": "wet troposphere vertical correction from weather model data",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "rad_wet_tropo_cor": {
+          "long_name": "wet troposphere vertical correction from radiometer data",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "depth_or_elevation": {
+          "long_name": "ocean depth or land elevation",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "distance_to_coast": {
+          "long_name": "distance to coast",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "ice_conc": {
+          "long_name": "concentration of sea ice",
+          "units": "%",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "rain_rate": {
+          "long_name": "rain rate from weather model",
+          "units": "mm/hr",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64"
+        },
+        "cross_track_distance": {
+          "long_name": "cross track distance",
+          "units": "m",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float32"
+        },
+        "cross_track_angle": {
+          "long_name": "cross-track angle from true north",
+          "units": "degrees",
+          "dims": ["num_lines"],
+          "dtype": "float64"
+        },
+        "time": {
+          "long_name": "time in UTC",
+          "units": "",
+          "dims": ["num_lines"],
+          "dtype": "datetime64[ns]"
+        },
+        "time_tai": {
+          "long_name": "time in TAI",
+          "units": "",
+          "dims": ["num_lines"],
+          "dtype": "datetime64[ns]"
+        },
+        "quality_flag": {
+          "long_name": "various quality flags",
+          "units": "",
+          "dims": ["num_lines", "num_pixels"],
+          "dtype": "float64",
+          "note": "Multiple quality flag variables exist: ssh_karin_qual, ssha_karin_qual, sig0_karin_qual, etc."
+        }
+      }
+    },
+    "SWOT_L3_LR_WIND_WAVE": {
+      "description": "SWOT Level 3 Low-Rate Wind and Wave spectral products from KaRIn",
+      "ftp_path": "l3_karin/l3_lr_wind_wave",
+      "versions": ["v2_0"],
+      "variants": ["Extended", "Light"],
+      "note": "Contains spectral data in HDF5 groups (tile_5km, tile_10km)",
+      "dimensions": {
+        "nfy": "frequency bins in along-track",
+        "nfx": "frequency bins in cross-track",
+        "nphi": "azimuthal bins",
+        "nf": "frequency vector length"
+      },
+      "groups": ["tile_5km", "tile_10km"],
+      "variables": {
+        "filter_PTR": {
+          "long_name": "instrumental filter, KaRIn azimuthal PTR",
+          "units": "m^2.m^2",
+          "group": "tile_5km/tile_10km"
+        },
+        "filter_OBP": {
+          "long_name": "instrumental filter, KaRIn OBP averaging",
+          "units": "m^2.m^2",
+          "group": "tile_5km/tile_10km"
+        },
+        "phi_vector": {
+          "long_name": "phase vector for polar E_f_phi_SWOT_mask",
+          "units": "rad",
+          "group": "tile_5km/tile_10km"
+        },
+        "f_vector": {
+          "long_name": "spatial frequency vector for polar",
+          "units": "m-1",
+          "group": "tile_5km/tile_10km"
+        },
+        "fx2D": {
+          "long_name": "spatial frequency in cross-track direction",
+          "units": "cycles per meter (m^-1)",
+          "group": "tile_5km/tile_10km"
+        },
+        "fy2D": {
+          "long_name": "spatial frequency in along-track direction",
+          "units": "cycles per meter (m^-1)",
+          "group": "tile_5km/tile_10km"
+        }
+      }
+    }
+  }
+}
