@@ -4,6 +4,9 @@ planning/
 
 notes/
 
+# Do not commit example notebooks
+examples/
+
 # Python build artifacts
 __pycache__/
 *.pyc
