@@ -34,7 +34,7 @@ def add_credential(source: str, **credentials):
         ...                        token="your_token")
     
     Note:
-        The source name supports fuzzy matching (e.g., "nasa" matches "nasa_earthdata").
+        The source name supports fuzzy matching (e.g., "nasaearthdata" matches "nasa_earthdata").
         A warning will be displayed if fuzzy matching is used.
     """
     return CredentialManager.add_credential(source, **credentials)
