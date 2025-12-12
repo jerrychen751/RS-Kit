@@ -2,8 +2,8 @@
 Central credential management system. Stateless utility class interacting with informations tored in OS keyring.
 """
 
-import keyring
 import json
+import keyring
 from typing import Dict, Optional, Any, List
 
 from ..core.registry import registry
@@ -87,7 +87,7 @@ class CredentialManager:
                 return []
         return []
     
-    # Internal methods
+    # Private helper methods
     @staticmethod
     def _validate_credentials(source: str, credentials: Dict[str, Any]) -> None:
         """Validate provided credentials against the plugin's required authentication schema.
