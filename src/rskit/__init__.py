@@ -14,4 +14,5 @@ from .api import query
 __all__ = [
     "query",
     "auth",
+    "registry",
 ]
