@@ -129,7 +129,10 @@ class PluginRegistry:
     def _ensure_plugin_class(self, source: str) -> Type["DataSourcePlugin"]:
         """Ensure the plugin class for a source is loaded and cached."""
         if source not in self._plugin_specs:
-            raise ValueError(f"Unknown data source '{source}'.")
+            supported = self.get_supported_sources()
+            raise ValueError(
+                f"Unknown data source '{source}'. Supported sources are: {supported}"
+            )
 
         if source not in self._plugins:
             module_path, class_name = self._plugin_specs[source]
