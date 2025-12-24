@@ -1,10 +1,13 @@
-"""Utilities for interacting with NASA's Common Metadata Repository (CMR) API."""
+"""
+Utilities for interacting with NASA's Common Metadata Repository (CMR) API.
+"""
 
 from __future__ import annotations
 
 import re
 import warnings
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 import requests
@@ -13,7 +16,9 @@ CollectionInfo = Tuple[str, dict]
 
 
 class CMRClient:
-    """Client for the NASA CMR API."""
+    """
+    Client for the NASA CMR API.
+    """
 
     COLLECTIONS_URL = "https://cmr.earthdata.nasa.gov/search/collections.json"
     GRANULES_URL = "https://cmr.earthdata.nasa.gov/search/granules.json"
@@ -33,19 +38,20 @@ class CMRClient:
             self._session.headers.update({"Authorization": f"Bearer {token}"})
 
     # Public API methods
-    def resolve_collection(
+    def get_collection_info(
         self,
         *,
         doi: Optional[str] = None,
         short_name: Optional[str] = None,
         version: Optional[str] = None,
     ) -> CollectionInfo:
-        """Resolve collection identifiers (DOI or short_name+version) to concept ID and metadata.
+        """
+        Resolve collection identifiers (DOI or short_name+version) to concept ID and metadata.
         
         Args:
-            doi: Collection DOI (e.g., "10.5067/...")
-            short_name: Collection short name (e.g., "MOD09GA")
-            version: Collection version (e.g., "006")
+            doi: Collection DOI
+            short_name: Collection short name
+            version: Collection version
             
         Returns:
             Tuple[str, dict]: (concept_id, collection_metadata)
@@ -176,47 +182,21 @@ class CMRClient:
         version: Optional[str] = None,
         keyword: Optional[str] = None,
     ) -> List[dict]:
-        """Search for variables associated with a collection.
-        
-        Uses the CMR API to discover available science variables for a given
-        collection. First resolves the collection from DOI or short_name+version,
-        then retrieves variable concept IDs from the collection's associations,
-        and fetches each variable's metadata.
-        
-        Args:
-            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0").
-            short_name: Collection short name (e.g., "SWOT_L2_HR_PIXC_2.0").
-            version: Collection version (e.g., "2.0"). Required if using short_name.
-            keyword: Optional keyword to filter variables by name or description.
-            
-        Returns:
-            List of variable metadata dictionaries with keys:
-                - concept_id: Variable concept ID
-                - name: Variable name (e.g., "/pixel_cloud/ssha")
-                - long_name: Human-readable description
-                - definition: Detailed variable definition
-                - units: Measurement units
-                - data_type: Data type (e.g., "float32")
-                - dimensions: List of dimension names
-                - scale: Scale factor if applicable
-                - offset: Offset value if applicable
-                - fill_value: Fill/missing value
-                
-        Raises:
-            ValueError: If neither doi nor both short_name and version are provided.
         """
-        # Step 1: Resolve collection to get concept ID
-        collection_concept_id, _ = self.resolve_collection(
+        Search for variables associated with a collection and their metadata.
+        """
+        # Resolve collection to get concept ID
+        collection_concept_id, collection_meta = self.get_collection_info(
             doi=doi, short_name=short_name, version=version
         )
         
-        # Step 2: Get variable concept IDs from collection associations
-        variable_concept_ids = self._get_collection_variable_associations(collection_concept_id)
+        # Get variable concept IDs from collection associations
+        variable_concept_ids = self._get_collection_variable_concept_ids(collection_concept_id)
         
         if not variable_concept_ids:
             return []
         
-        # Step 2: Fetch metadata for each variable
+        # Fetch metadata for each variable using variable concept ids
         collected: List[dict] = []
         
         for var_id in variable_concept_ids:
@@ -240,14 +220,9 @@ class CMRClient:
         
         return collected
     
-    def _get_collection_variable_associations(self, collection_concept_id: str) -> List[str]:
-        """Get variable concept IDs associated with a collection.
-        
-        Args:
-            collection_concept_id: CMR collection concept ID.
-            
-        Returns:
-            List of variable concept IDs.
+    def _get_collection_variable_concept_ids(self, collection_concept_id: str) -> List[str]:
+        """
+        Get variable concept IDs associated with a collection.
         """
         url = "https://cmr.earthdata.nasa.gov/search/collections.umm_json"
         params = {"concept_id": collection_concept_id}
@@ -266,13 +241,8 @@ class CMRClient:
         return associations.get("variables", [])
     
     def _fetch_variable_metadata(self, variable_concept_id: str) -> Optional[dict]:
-        """Fetch metadata for a single variable.
-        
-        Args:
-            variable_concept_id: CMR variable concept ID (starts with 'V').
-            
-        Returns:
-            Variable metadata dictionary or None if fetch fails.
+        """
+        Fetch metadata for a single variable.
         """
         url = f"https://cmr.earthdata.nasa.gov/search/concepts/{variable_concept_id}"
         headers = {"Accept": "application/vnd.nasa.cmr.umm+json"}
@@ -280,22 +250,22 @@ class CMRClient:
         response = self._session.get(url, headers=headers, timeout=self._timeout)
         response.raise_for_status()
         
-        umm = response.json()
+        meta = response.json()
         
         return {
             "concept_id": variable_concept_id,
-            "name": umm.get("Name", ""),
-            "long_name": umm.get("LongName", ""),
-            "definition": umm.get("Definition", ""),
-            "units": umm.get("Units", ""),
-            "data_type": umm.get("DataType", ""),
+            "name": meta.get("Name", ""),
+            "long_name": meta.get("LongName", ""),
+            "definition": meta.get("Definition", ""),
+            "units": meta.get("Units", ""),
+            "data_type": meta.get("DataType", ""),
             "dimensions": [
                 d.get("Name", "") 
-                for d in umm.get("Dimensions", [])
+                for d in meta.get("Dimensions", [])
             ],
-            "scale": umm.get("Scale"),
-            "offset": umm.get("Offset"),
-            "fill_value": umm.get("FillValues", [{}])[0].get("Value") if umm.get("FillValues") else None,
+            "scale": meta.get("Scale"),
+            "offset": meta.get("Offset"),
+            "fill_value": meta.get("FillValues", [{}])[0].get("Value") if meta.get("FillValues") else None,
         }
 
     def get_variable_names(
@@ -305,20 +275,8 @@ class CMRClient:
         short_name: Optional[str] = None,
         version: Optional[str] = None,
     ) -> List[str]:
-        """Get list of variable names for a collection.
-        
-        Convenience method that returns just the variable names.
-        
-        Args:
-            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0").
-            short_name: Collection short name (e.g., "SWOT_L2_HR_PIXC_2.0").
-            version: Collection version (e.g., "2.0"). Required if using short_name.
-            
-        Returns:
-            List of variable names available in the collection.
-            
-        Raises:
-            ValueError: If neither doi nor both short_name and version are provided.
+        """
+        Get list of variable names for a collection.
         """
         variables = self.search_variables(doi=doi, short_name=short_name, version=version)
         return [v["name"] for v in variables if v["name"]]
@@ -330,7 +288,9 @@ class CMRClient:
         limit: Optional[int] = None,
         skip_existing: bool = True,
     ) -> List[Path]:
-        """Download granules to the destination directory."""
+        """
+        Download granules to the destination directory.
+        """
         destination.mkdir(parents=True, exist_ok=True)
         downloaded: List[Path] = []
 
@@ -360,6 +320,15 @@ class CMRClient:
     # Private helper methods
     @staticmethod
     def _normalize_doi(doi: str) -> str:
-        """Return DOI value without URL prefix."""
-        return re.sub(r"^https?://doi\.org/", "", doi).strip()
+        """
+        Return DOI value without URL prefix.
+        """
+        s = doi.strip()
+        if "://" in s:
+            u = urlparse(s)
+            host = (u.netloc or "").lower()
 
+            if host == "doi.org" or host.endswith(".doi.org"):
+                doi = u.path.lstrip("/")
+                return doi.strip()
+        return s
