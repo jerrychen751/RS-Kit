@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "src" / "rskit" / "core" / "registry.py"
 OUTPUT_PATH = ROOT / "docs" / "credentials.md"
 
@@ -69,7 +69,7 @@ def _render_docs(specs: Dict[str, Tuple[str, str]]) -> str:
         "# Data Plugin Credentials",
         "",
         "This page is generated from plugin `schema.json` definitions.",
-        "Run `python scripts/generate_credentials_docs.py` to update.",
+        "Run `python scripts/docs/generate_credentials_docs.py` to update.",
         "",
     ]
 
