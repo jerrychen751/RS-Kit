@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -30,16 +31,26 @@ def _module_to_path(module_path: str) -> Path:
     return ROOT / "src" / Path(*module_path.split("."))
 
 
-def _find_class_schema(tree: ast.AST, class_name: str) -> Dict[str, Any]:
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef) or node.name != class_name:
-            continue
-        for stmt in node.body:
-            if not isinstance(stmt, ast.Assign):
-                continue
-            if any(isinstance(t, ast.Name) and t.id == "CREDENTIAL_SCHEMA" for t in stmt.targets):
-                return ast.literal_eval(stmt.value)
-    raise ValueError(f"Unable to find CREDENTIAL_SCHEMA on class {class_name}.")
+def _load_schema_json(schema_path: Path) -> Dict[str, Any]:
+    data = json.loads(schema_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"Schema JSON must be an object: {schema_path}")
+    return data
+
+
+def _get_credential_schema(module_file: Path, class_name: str) -> Dict[str, Any]:
+    schema_path = module_file.with_name("schema.json")
+    if not schema_path.exists():
+        raise ValueError(f"Missing schema.json for {class_name}: {schema_path}")
+    data = _load_schema_json(schema_path)
+    schema = data.get("credential_schema", {})
+    if schema is None:
+        return {}
+    if not isinstance(schema, dict):
+        raise ValueError(
+            f"credential_schema must be an object: {schema_path}"
+        )
+    return schema
 
 
 def _format_fields(fields: Iterable[str], descriptions: Dict[str, Any]) -> List[str]:
@@ -57,14 +68,14 @@ def _render_docs(specs: Dict[str, Tuple[str, str]]) -> str:
     lines: List[str] = [
         "# Data Plugin Credentials",
         "",
-        "This page is generated from plugin `CREDENTIAL_SCHEMA` definitions.",
+        "This page is generated from plugin `schema.json` definitions.",
         "Run `python scripts/generate_credentials_docs.py` to update.",
         "",
     ]
 
     for source, (module_path, class_name) in specs.items():
         module_file = _module_to_path(module_path).with_suffix(".py")
-        schema = _find_class_schema(_load_ast(module_file), class_name)
+        schema = _get_credential_schema(module_file, class_name)
         required = list(schema.get("required_fields", []))
         descriptions = dict(schema.get("field_descriptions", {}))
         optional = [field for field in descriptions.keys() if field not in required]
