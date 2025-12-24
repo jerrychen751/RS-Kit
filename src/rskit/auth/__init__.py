@@ -18,13 +18,13 @@ def add_credential(source: str, **credentials):
         source (str): Data source identifier (e.g., "nasa_earthdata", "aviso_altimetry").
             Use list_supported_sources() to see all available sources.
         **credentials: Credential key-value pairs required by the data source.
-            Use get_auth_schema(source) to see the required fields and their format.
+            Use get_credential_schema(source) to see the required fields and their format.
     
     Examples:
         >>> # First, discover available sources and their credential requirements
         >>> rs.auth.list_supported_sources()
         ['nasa_earthdata', 'aviso_altimetry']
-        >>> rs.auth.get_auth_schema("nasa_earthdata")
+        >>> rs.auth.get_credential_schema("nasa_earthdata")
         {'required_fields': ['username', 'password', 'token']}
         
         >>> # Then add credentials with the correct fields
@@ -51,8 +51,8 @@ def list_added_credentials():
 def list_supported_sources():
     return registry.get_supported_sources()
 
-def get_auth_schema(source: str):
-    return registry.get_auth_schema(source)
+def get_credential_schema(source: str):
+    return registry.get_credential_schema(source)
 
 __all__ = [
     "add_credential",
@@ -60,5 +60,5 @@ __all__ = [
     "remove_credential",
     "list_added_credentials",
     "list_supported_sources",
-    "get_auth_schema"
+    "get_credential_schema"
 ]

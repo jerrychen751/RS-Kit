@@ -30,7 +30,7 @@ class SearchParameters:
 class NasaEarthdata(DataSourcePlugin):
     """NASA Earthdata plugin leveraging the CMR API for discovery and downloads."""
 
-    AUTH_SCHEMA = {
+    CREDENTIAL_SCHEMA = {
         "required_fields": ["username", "password", "token"],
         "field_descriptions": {
             "username": "NASA Earthdata username",

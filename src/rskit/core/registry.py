@@ -13,7 +13,9 @@ PluginSpec = Tuple[str, str]
 
 
 class PluginRegistry:
-    """Manages data source plugins and supported source discovery."""
+    """
+    Manages data source plugins and supported source discovery.
+    """
 
     def __init__(self) -> None:
         # Map plugin source name to import path and class name
@@ -50,38 +52,38 @@ class PluginRegistry:
         except ValueError:
             return None
 
-    def get_auth_schema(self, source: str) -> Dict[str, object]:
+    def get_credential_schema(self, source: str) -> Dict[str, object]:
         """
-        Return the authentication schema for a given data source, which dictates the credential fields required to authenticate against a data source.
+        Return the credential schema for a given data source, which dictates the credential fields required to authenticate against a data source.
 
         Args:
             source (str): Data source identifier.
 
         Returns:
-            Dict[str, object]: Plugin-defined authentication schema.
+            Dict[str, object]: Plugin-defined credential schema.
 
         Raises:
-            ValueError: If the source is unknown or the plugin does not define an authentication schema.
+            ValueError: If the source is unknown or the plugin does not define a credential schema.
         """
         # Resolve and warn if fuzzy-matched
         matched_source = self._match_source_name(source)
         if matched_source != source:
             print(
-                f"Warning: '{source}' is not supported. Getting auth schema for '{matched_source}'."
+                f"Warning: '{source}' is not supported. Getting credential schema for '{matched_source}'."
             )
 
         plugin_class = self._get_plugin_class(matched_source)
         plugin_instance = plugin_class()
 
-        if not hasattr(plugin_instance, "get_auth_schema"):
+        if not hasattr(plugin_instance, "get_credential_schema"):
             raise ValueError(
-                f"Plugin for source '{source}' does not define an authentication schema."
+                f"Plugin for source '{source}' does not define a credential schema."
             )
 
-        schema = plugin_instance.get_auth_schema()
+        schema = plugin_instance.get_credential_schema()
         if not isinstance(schema, dict):
             raise ValueError(
-                f"Authentication schema for source '{source}' must be a dict, got {type(schema).__name__}."
+                f"Credential schema for source '{source}' must be a dict, got {type(schema).__name__}."
             )
         return schema
 

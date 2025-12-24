@@ -26,16 +26,16 @@ from ..core.query import Query
 
 class DataSourcePlugin(ABC):
     name: str
-    AUTH_SCHEMA: Dict[str, Any]
+    CREDENTIAL_SCHEMA: Dict[str, Any]
 
-    def get_auth_schema(self) -> Dict[str, Any]:
-        """Return the credentials schema required for authentication.
+    def get_credential_schema(self) -> Dict[str, Any]:
+        """Return the credential schema required for authentication.
 
         Returns:
-            Dict[str, Any]: A dictionary describing the required authentication parameters
+            Dict[str, Any]: A dictionary describing the required credential parameters
             (e.g., username, password, token) and their properties (such as type, optionality).
         """
-        return self.AUTH_SCHEMA
+        return self.CREDENTIAL_SCHEMA
     
     @abstractmethod
     def supports_variable(self, variable: str) -> bool:
