@@ -1,7 +1,7 @@
 # Data Plugin Credentials
 
 This page is generated from plugin `schema.json` definitions.
-Run `python scripts/generate_credentials_docs.py` to update.
+Run `python scripts/docs/generate_credentials_docs.py` to update.
 
 ## nasa_earthdata
 

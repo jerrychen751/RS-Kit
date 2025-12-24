@@ -1,7 +1,7 @@
 # Data Plugin Query Parameters
 
 This page is generated from plugin `schema.json` definitions.
-Run `python scripts/generate_query_params_docs.py` to update.
+Run `python scripts/docs/generate_query_params_docs.py` to update.
 
 ## nasa_earthdata
 
