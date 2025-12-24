@@ -8,14 +8,7 @@
     }
   },
   "params_schema": {
-    "required_fields": [],
-    "required_any_of": [
-      [
-        ["collection_concept_id"],
-        ["collection_doi"],
-        ["collection_short_name", "collection_version"]
-      ]
-    ],
+    "required_fields": ["collection_concept_id"],
     "optional_fields": [
       "cloud_cover",
       "sort_key",
@@ -25,9 +18,6 @@
     ],
     "field_descriptions": {
       "collection_concept_id": "CMR collection concept ID.",
-      "collection_doi": "Collection DOI (e.g., '10.5067/SWOT-L2_HR_PIXC-2.0').",
-      "collection_short_name": "Collection short name (requires collection_version).",
-      "collection_version": "Collection version (requires collection_short_name).",
       "cloud_cover": "Tuple of (min_percent, max_percent) for cloud cover filtering.",
       "sort_key": "CMR sort key (e.g., '-start_date').",
       "max_granules": "Maximum number of granules to return/download.",

@@ -3,7 +3,7 @@
 This plugin provides discovery, download, and fetch helpers for NASA Earthdata collections.
 
 Required query params (via `Query.with_params(...)`):
-- Provide one of: `collection_concept_id`, `collection_doi`, or both `collection_short_name` and `collection_version`.
+- `collection_concept_id` (resolve it first with `NasaEarthdata.resolve_collection_concept_id`).
 
 Other required query settings:
 - `Query.time(...)` and `Query.region(...)`.

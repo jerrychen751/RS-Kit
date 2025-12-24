@@ -7,8 +7,8 @@ Run `python scripts/docs/generate_query_params_docs.py` to update.
 
 Plugin class: `NasaEarthdata`
 
-Required (one of):
-- `collection_concept_id`, or `collection_doi`, or `collection_short_name`, `collection_version`
+Required fields:
+- `collection_concept_id`: CMR collection concept ID.
 
 Optional fields:
 - `cloud_cover`: Tuple of (min_percent, max_percent) for cloud cover filtering.
