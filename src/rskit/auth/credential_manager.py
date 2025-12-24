@@ -99,7 +99,7 @@ class CredentialManager:
         Raises:
             ValueError: If required credential fields are missing, the number of provided fields does not match the required fields, or the plugin does not define an authentication schema.
         """
-        plugin_class = registry._match_plugin_class(source)
+        plugin_class = registry._get_plugin_class(source)
         plugin_instance = plugin_class()
 
         if hasattr(plugin_instance, 'get_auth_schema'):
