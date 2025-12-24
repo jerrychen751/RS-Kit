@@ -1,11 +1,6 @@
-# Ignore planning and design documentation
-*.md
-planning/
-
 notes/
-
-# Do not commit example notebooks
 examples/
+.github/
 
 # Python build artifacts
 __pycache__/
