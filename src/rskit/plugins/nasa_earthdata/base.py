@@ -27,6 +27,43 @@ class SearchParameters:
     destination: Path
 
 
+class NasaEarthdataCollection:
+    """Bound helper for interacting with a single NASA Earthdata collection."""
+
+    def __init__(self, plugin: "NasaEarthdata", collection_concept_id: str) -> None:
+        if not collection_concept_id:
+            raise ValueError("collection_concept_id is required to bind a collection.")
+        self._plugin = plugin
+        self.collection_concept_id = collection_concept_id
+
+    def list_supported_variables(
+        self,
+        *,
+        keyword: Optional[str] = None,
+        umm: bool = False,
+    ) -> List[Dict[str, Any]]:
+        return self._plugin.list_supported_variables(
+            collection_concept_id=self.collection_concept_id,
+            keyword=keyword,
+            umm=umm,
+        )
+
+    def supports_variable(self, variable: str) -> bool:
+        return self._plugin.supports_variable(
+            variable,
+            collection_concept_id=self.collection_concept_id,
+        )
+
+    def supports_harmony(self) -> bool:
+        return self._plugin.supports_harmony(self.collection_concept_id)
+
+    def get_harmony_capabilities(self) -> Dict[str, Any]:
+        return self._plugin.get_harmony_capabilities(self.collection_concept_id)
+
+    def get_collection_info(self) -> Dict[str, Any]:
+        return self._plugin.get_collection_info(self.collection_concept_id)
+
+
 class NasaEarthdata(DataSourcePlugin):
     """NASA Earthdata plugin leveraging the CMR API for discovery and downloads."""
 
@@ -59,10 +96,9 @@ class NasaEarthdata(DataSourcePlugin):
     def list_supported_variables(
         self,
         *,
-        doi: Optional[str] = None,
-        short_name: Optional[str] = None,
-        version: Optional[str] = None,
+        collection_concept_id: str,
         keyword: Optional[str] = None,
+        umm: bool = False,
     ) -> List[Dict[str, Any]]:
         """List supported variables for a NASA Earthdata collection.
         
@@ -70,13 +106,12 @@ class NasaEarthdata(DataSourcePlugin):
         variables available in the specified collection.
         
         Args:
-            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0"). This alone is sufficient to identify a collection.
-            short_name: Collection short name (e.g., "PACE_OCI_L3M_RRS").
-            version: Collection version (e.g., "3.1").
+            collection_concept_id: CMR collection concept ID.
             keyword: Optional keyword filters to include in CMR API call.
+            umm: When True, return raw UMM variable metadata.
             
         Returns:
-            List of variable metadata dictionaries containing:
+            When umm is False, list of variable metadata dictionaries containing:
                 - concept_id: CMR variable concept ID
                 - name: Variable name (e.g., "/pixel_cloud/ssha")
                 - long_name: Human-readable description
@@ -87,26 +122,27 @@ class NasaEarthdata(DataSourcePlugin):
                 - scale: Scale factor if applicable
                 - offset: Offset value if applicable
                 - fill_value: Fill/missing value
+            When umm is True, a list of raw UMM metadata dictionaries.
                 
         Raises:
-            ValueError: If neither doi nor both short_name and version are provided.
+            ValueError: If collection_concept_id is missing.
                 
         Example:
             >>> plugin = NasaEarthdata()
-            >>> # Using DOI (preferred - found in Earthdata Search)
-            >>> variables = plugin.list_supported_variables(doi="10.5067/SWOT-L2_HR_PIXC-2.0")
-            >>> 
-            >>> # Using short_name + version
-            >>> variables = plugin.list_supported_variables(short_name="SWOT_L2_HR_PIXC_2.0", version="2.0")
+            >>> collection_id = plugin.resolve_collection_concept_id(
+            ...     doi="10.5067/SWOT-L2_HR_PIXC-2.0"
+            ... )
+            >>> variables = plugin.list_supported_variables(
+            ...     collection_concept_id=collection_id
+            ... )
             >>> 
             >>> for var in variables[:5]:
             ...     print(f"{var['name']}: {var['long_name']}")
         """
         variables = self._client.get_collection_variables(
-            doi=doi,
-            short_name=short_name,
-            version=version,
+            collection_concept_id=collection_concept_id,
             keyword=keyword,
+            umm=umm,
         )
         
         return variables
@@ -115,31 +151,49 @@ class NasaEarthdata(DataSourcePlugin):
         self,
         variable: str,
         *,
-        doi: Optional[str] = None,
-        short_name: Optional[str] = None,
-        version: Optional[str] = None,
+        collection_concept_id: str,
     ) -> bool:
         """Check if a collection supports a specific variable.
         
         Args:
             variable: Variable name to check (e.g., "ssha", "ssh_karin").
-            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0").
-            short_name: Collection short name (requires version).
-            version: Collection version (requires short_name).
+            collection_concept_id: CMR collection concept ID.
             
         Returns:
             True if the variable is available in the collection.
             
         Raises:
-            ValueError: If neither doi nor both short_name and version are provided.
+            ValueError: If collection_concept_id is missing.
         """
         variables = self.list_supported_variables(
+            collection_concept_id=collection_concept_id,
+        )
+        needle = variable.lower()
+        return any(v.get("name", "").lower() == needle for v in variables)
+
+    def resolve_collection_concept_id(
+        self,
+        *,
+        doi: Optional[str] = None,
+        short_name: Optional[str] = None,
+        version: Optional[str] = None,
+    ) -> str:
+        """Resolve any of DOI, short_name, or version to a CMR collection concept ID."""
+        return self._client.resolve_collection_concept_id(
             doi=doi,
             short_name=short_name,
             version=version,
         )
-        needle = variable.lower()
-        return any(v.get("name", "").lower() == needle for v in variables)
+
+    def get_collection_info(self, collection_concept_id: str) -> Dict[str, Any]:
+        """Fetch CMR collection metadata for a concept ID."""
+        return self._client.get_collection_info(
+            collection_concept_id=collection_concept_id,
+        )
+
+    def collection(self, collection_concept_id: str) -> NasaEarthdataCollection:
+        """Return a collection-scoped helper for repeated lookups."""
+        return NasaEarthdataCollection(self, collection_concept_id)
     
     def supports_harmony(self, collection_concept_id: str) -> bool:
         """Check if a collection supports Harmony server-side subsetting.
@@ -344,7 +398,11 @@ class NasaEarthdata(DataSourcePlugin):
         params = query.params
         collection_id = params.get("collection_concept_id")
         if not collection_id:
-            collection_id = self._resolve_collection_concept_id(params)
+            raise ValueError(
+                "NASA Earthdata queries require `collection_concept_id`. "
+                "Resolve it first using `NasaEarthdata.resolve_collection_concept_id(...)` "
+                "and pass it via Query.with_params(collection_concept_id=...)."
+            )
 
         resolved_limit = limit or params.get("max_granules")
 
@@ -382,24 +440,6 @@ class NasaEarthdata(DataSourcePlugin):
         if params.limit:
             urls = urls[: params.limit]
         return granules, urls
-
-    def _resolve_collection_concept_id(self, params: Dict[str, Any]) -> str:
-        doi = params.get("collection_doi")
-        short_name = params.get("collection_short_name")
-        version = params.get("collection_version")
-
-        concept_id, _ = self._client.get_collection_info(
-            doi=doi,
-            short_name=short_name,
-            version=version,
-        )
-        if not concept_id:
-            raise ValueError(
-                "Unable to resolve collection concept ID. Provide either "
-                "`collection_concept_id`, `collection_doi`, or both "
-                "`collection_short_name` and `collection_version` in query params."
-            )
-        return concept_id
 
     def _resolve_destination(
         self,

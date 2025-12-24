@@ -4,15 +4,13 @@ Utilities for interacting with NASA's Common Metadata Repository (CMR) API.
 
 from __future__ import annotations
 
-import re
-import warnings
 from pathlib import Path
 from urllib.parse import urlparse
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import requests
 
-CollectionInfo = Tuple[str, dict]
+CollectionInfo = Dict[str, Any]
 
 
 class CmrClient:
@@ -38,65 +36,90 @@ class CmrClient:
             self._session.headers.update({"Authorization": f"Bearer {token}"})
 
     # Public API methods
-    def get_collection_info(
+    def resolve_collection_concept_id(
         self,
         *,
         doi: Optional[str] = None,
         short_name: Optional[str] = None,
         version: Optional[str] = None,
-    ) -> CollectionInfo:
+    ) -> str:
         """
-        Resolve collection identifiers (DOI or short_name+version) to concept ID and metadata.
-        
+        Resolve collection identifiers (any of DOI, short_name, version) to a concept ID.
+
         Args:
-            doi: Collection DOI
-            short_name: Collection short name
-            version: Collection version
-            
+            doi: Collection DOI (optional).
+            short_name: Collection short name (optional).
+            version: Collection version (optional).
+
         Returns:
-            Tuple[str, dict]: (concept_id, collection_metadata)
-            
+            Collection concept ID string.
+
         Raises:
-            ValueError: If neither doi nor both short_name and version are provided, or if no collections are found.
+            ValueError: If no identifiers are provided, results are ambiguous, or no collections are found.
         """
-        # Build params dictionary
-        params = {}
+        params: Dict[str, str] = {}
         if doi:
-            params["doi"] = CmrClient._normalize_doi(doi)
-        elif short_name and version:
+            params["doi"] = self._normalize_doi(doi)
+        if short_name:
             params["short_name"] = short_name
+        if version:
             params["version"] = str(version)
-        else:
+        if not params:
             raise ValueError(
-                "Either doi or both short_name and version must be provided to identify a collection."
+                "At least one of doi, short_name, or version must be provided to identify a collection."
             )
 
-        # Make HTTP GET request
-        response = self._session.get(
-            self.COLLECTIONS_URL,
-            params=params,
-            timeout=self._timeout,
-        )
-        response.raise_for_status()
-        data = response.json()
-        entries = data.get("feed", {}).get("entry", [])
+        entries = self._search_collections(params)
 
         if not entries:
             raise ValueError("No collection results returned for provided identifiers.")
 
         if len(entries) > 1:
             collection_names = [entry.get("title", entry.get("id", "Unknown")) for entry in entries]
-            warnings.warn(
-                f"Multiple collections ({len(entries)}) found matching the search criteria. "
-                f"Using the first match: '{collection_names[0]}'. "
-                f"Other matches: {collection_names[1:]}. "
-                "Consider refining your search criteria (e.g., using a more specific DOI or version).",
-                UserWarning,
-                stacklevel=2,
+            raise ValueError(
+                "Multiple collections found matching the search criteria. "
+                f"Matches: {collection_names}. "
+                "Refine your identifiers (e.g., use a more specific DOI or version)."
             )
 
-        collection = entries[0]
-        return collection.get("id", ""), collection
+        concept_id = entries[0].get("id", "")
+        if not concept_id:
+            raise ValueError("Collection concept ID not found in CMR response.")
+
+        return concept_id
+
+    def get_collection_info(
+        self,
+        *,
+        collection_concept_id: str,
+    ) -> CollectionInfo:
+        """
+        Fetch collection metadata for a specific concept ID.
+
+        Args:
+            collection_concept_id: CMR collection concept ID.
+
+        Returns:
+            Collection metadata dictionary.
+
+        Raises:
+            ValueError: If collection_concept_id is missing or no collection is found.
+        """
+        if not collection_concept_id:
+            raise ValueError("collection_concept_id is required to fetch collection info.")
+
+        entries = self._search_collections({"concept_id": collection_concept_id})
+        if not entries:
+            raise ValueError(
+                f"No collection results returned for concept_id '{collection_concept_id}'."
+            )
+        if len(entries) > 1:
+            raise ValueError(
+                "Multiple collections returned for concept_id "
+                f"'{collection_concept_id}', which should be unique."
+            )
+
+        return entries[0]
 
     def search_granules(
         self,
@@ -174,21 +197,26 @@ class CmrClient:
         urls.sort()
         return urls
 
-    def search_variables(
+    def get_collection_variables(
         self,
         *,
-        doi: Optional[str] = None,
-        short_name: Optional[str] = None,
-        version: Optional[str] = None,
+        collection_concept_id: str,
         keyword: Optional[str] = None,
+        umm: bool = False,
     ) -> List[dict]:
         """
-        Search for variables associated with a collection and their metadata.
+        Get variables associated with a collection and their metadata. Keyword match is done case-insensitively with variable name/definition.
+
+        Args:
+            collection_concept_id: CMR collection concept ID.
+            keyword: Optional keyword filter for variable name/definition.
+            umm: When True, return the raw UMM metadata for each variable.
+
+        Returns:
+            List of variable metadata dictionaries.
         """
-        # Resolve collection to get concept ID
-        collection_concept_id, collection_meta = self.get_collection_info(
-            doi=doi, short_name=short_name, version=version
-        )
+        if not collection_concept_id:
+            raise ValueError("collection_concept_id is required to fetch collection variables.")
         
         # Get variable concept IDs from collection associations
         variable_concept_ids = self._get_collection_variable_concept_ids(collection_concept_id)
@@ -201,19 +229,44 @@ class CmrClient:
         
         for var_id in variable_concept_ids:
             try:
-                var_meta = self._fetch_variable_metadata(var_id)
-                if var_meta:
-                    # Apply keyword filter if provided
-                    if keyword:
-                        keyword_lower = keyword.lower()
-                        name_match = keyword_lower in var_meta.get("name", "").lower()
-                        long_name_match = keyword_lower in var_meta.get("long_name", "").lower()
-                        definition_match = keyword_lower in var_meta.get("definition", "").lower()
-                        
-                        if not (name_match or long_name_match or definition_match):
-                            continue
-                    
-                    collected.append(var_meta)
+                umm_meta = self._get_variable_umm(var_id)
+                if not umm_meta:
+                    continue
+
+                # Apply keyword filter if provided
+                if keyword:
+                    keyword_lower = keyword.lower()
+                    name_match = keyword_lower in umm_meta.get("Name", "").lower()
+                    long_name_match = keyword_lower in umm_meta.get("LongName", "").lower()
+                    definition_match = keyword_lower in umm_meta.get("Definition", "").lower()
+
+                    if not (name_match or long_name_match or definition_match):
+                        continue
+
+                if umm:
+                    collected.append(umm_meta)
+                else:
+                    collected.append(
+                        {
+                            "concept_id": var_id,
+                            "name": umm_meta.get("Name", ""),
+                            "long_name": umm_meta.get("LongName", ""),
+                            "definition": umm_meta.get("Definition", ""),
+                            "units": umm_meta.get("Units", ""),
+                            "data_type": umm_meta.get("DataType", ""),
+                            "dimensions": [
+                                d.get("Name", "")
+                                for d in umm_meta.get("Dimensions", [])
+                            ],
+                            "scale": umm_meta.get("Scale"),
+                            "offset": umm_meta.get("Offset"),
+                            "fill_value": (
+                                umm_meta.get("FillValues", [{}])[0].get("Value")
+                                if umm_meta.get("FillValues")
+                                else None
+                            ),
+                        }
+                    )
             except requests.RequestException:
                 # Skip variables that fail to fetch
                 continue
@@ -240,7 +293,7 @@ class CmrClient:
         associations = meta.get("associations", {})
         return associations.get("variables", [])
     
-    def _fetch_variable_metadata(self, variable_concept_id: str) -> Optional[dict]:
+    def _get_variable_umm(self, variable_concept_id: str) -> Optional[dict]:
         """
         Fetch metadata for a single variable.
         """
@@ -252,34 +305,7 @@ class CmrClient:
         
         meta = response.json()
         
-        return {
-            "concept_id": variable_concept_id,
-            "name": meta.get("Name", ""),
-            "long_name": meta.get("LongName", ""),
-            "definition": meta.get("Definition", ""),
-            "units": meta.get("Units", ""),
-            "data_type": meta.get("DataType", ""),
-            "dimensions": [
-                d.get("Name", "") 
-                for d in meta.get("Dimensions", [])
-            ],
-            "scale": meta.get("Scale"),
-            "offset": meta.get("Offset"),
-            "fill_value": meta.get("FillValues", [{}])[0].get("Value") if meta.get("FillValues") else None,
-        }
-
-    def get_variable_names(
-        self,
-        *,
-        doi: Optional[str] = None,
-        short_name: Optional[str] = None,
-        version: Optional[str] = None,
-    ) -> List[str]:
-        """
-        Get list of variable names for a collection.
-        """
-        variables = self.search_variables(doi=doi, short_name=short_name, version=version)
-        return [v["name"] for v in variables if v["name"]]
+        return meta
 
     def download_granules(
         self,
@@ -318,8 +344,17 @@ class CmrClient:
         return downloaded
 
     # Private helper methods
-    @staticmethod
-    def _normalize_doi(doi: str) -> str:
+    def _search_collections(self, params: Dict[str, str]) -> List[dict]:
+        response = self._session.get(
+            self.COLLECTIONS_URL,
+            params=params,
+            timeout=self._timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("feed", {}).get("entry", [])
+
+    def _normalize_doi(self, doi: str) -> str:
         """
         Return DOI value without URL prefix.
         """
