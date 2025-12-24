@@ -17,7 +17,8 @@ class CredentialManager:
     # Public API methods
     @staticmethod
     def add_credential(source: str, **credentials) -> None:
-        """Add credentials for a data source.
+        """
+        Add credentials for a data source.
         
         Args:
             source (str): Data source identifier.
@@ -31,16 +32,21 @@ class CredentialManager:
         CredentialManager._validate_credentials(matched_source, credentials)
 
         # Store and update registry
-        keyring.set_password(CredentialManager.SERVICE_NAME, source, json.dumps(credentials))
+        keyring.set_password(
+            CredentialManager.SERVICE_NAME,
+            matched_source,
+            json.dumps(credentials),
+        )
 
         sources = CredentialManager.list_added_credentials()
-        if source not in sources:
-            sources.append(source)
+        if matched_source not in sources:
+            sources.append(matched_source)
             CredentialManager._update_stored_sources(sorted(sources))
     
     @staticmethod
     def get_credential(source: str) -> Optional[Dict[str, Any]]:
-        """Get credentials for a data source.
+        """
+        Get credentials for a data source.
         
         Args:
             source (str): Data source identifier.
@@ -57,7 +63,8 @@ class CredentialManager:
     
     @staticmethod
     def remove_credential(source: str) -> None:
-        """Remove credentials for a data source.
+        """
+        Remove credentials for a data source.
         
         Args:
             source (str): Data source identifier.
@@ -74,7 +81,8 @@ class CredentialManager:
 
     @staticmethod
     def list_added_credentials() -> List[str]:
-        """List all stored data source identifiers.
+        """
+        List all stored data source identifiers.
         
         Returns:
             List[str]: List of data source identifiers.
@@ -90,21 +98,22 @@ class CredentialManager:
     # Private helper methods
     @staticmethod
     def _validate_credentials(source: str, credentials: Dict[str, Any]) -> None:
-        """Validate provided credentials against the plugin's required authentication schema.
+        """
+        Validate provided credentials against the plugin's required credential schema.
 
         Args:
             source (str): Data source identifier (must match a registered data plugin).
             credentials (Dict[str, Any]): Credential key-value pairs to validate.
 
         Raises:
-            ValueError: If required credential fields are missing, the number of provided fields does not match the required fields, or the plugin does not define an authentication schema.
+            ValueError: If required credential fields are missing, the number of provided fields does not match the required fields, or the plugin does not define a credential schema.
         """
         plugin_class = registry._get_plugin_class(source)
         plugin_instance = plugin_class()
 
-        if hasattr(plugin_instance, 'get_auth_schema'):
+        if hasattr(plugin_instance, 'get_credential_schema'):
             try:
-                schema = plugin_instance.get_auth_schema()
+                schema = plugin_instance.get_credential_schema()
                 required_fields: List[str] = schema['required_fields']
 
                 for field in required_fields:
@@ -123,16 +132,17 @@ class CredentialManager:
                     )
             except AttributeError:
                 raise ValueError(
-                    f"Plugin for source '{source}' does not define an authentication schema."
+                    f"Plugin for source '{source}' does not define a credential schema."
                 )
         else:
             raise ValueError(
-                f"Plugin for source '{source}' does not define an authentication schema."
+                f"Plugin for source '{source}' does not define a credential schema."
             )
 
     @staticmethod
     def _update_stored_sources(sources: List[str]) -> None:
-        """Update the set of stored data source identifiers in the OS keyring.
+        """
+        Update the set of stored data source identifiers in the OS keyring.
         
         Args:
             sources (Set[str]): Set of data source identifiers to store.
