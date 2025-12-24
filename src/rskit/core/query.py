@@ -26,10 +26,10 @@ class Query:
         self._spatial_extent: Optional[SpatialExtent] = None
         self._temporal_extent: Optional[TemporalExtent] = None
         self._variable_name: Optional[str] = None
-        self._options: Dict[str, Any] = {}
+        self._params: Dict[str, Any] = {}
 
         # FTP servers
-        self._data_path: Optional[str]
+        self._data_path: Optional[str] = None
     
     # Public API methods
     def variable(self, name: str) -> Query:
@@ -124,17 +124,18 @@ class Query:
         self._temporal_extent = TemporalExtent(start=start, end=end)
         return self
     
-    def with_options(self, **options) -> Query:
-        """Add additional query options.
+    def with_params(self, **params) -> Query:
+        """Add plugin-specific query parameters.
         
         Args:
-            **options: Additional options to pass to the query.
+            **params: Plugin-specific parameters required by the active data source.
             
         Returns:
             (Query): Query instance for method chaining.
         """
-        self._options.update(options)
+        self._params.update(params)
         return self
+
 
     # Calls methods from executor.py, which delegates to specific plugin-specific implementations
     def download(
@@ -165,8 +166,9 @@ class Query:
 
         Notes:
             Additional keyword arguments are forwarded to the active source plugin's
-            `fetch()` implementation. This enables plugin-specific options such as
+            `fetch()` implementation. This enables plugin-specific fetch kwargs such as
             NASA Earthdata Harmony subsetting (e.g., `use_harmony`, `variables`).
+            Plugin-specific query params should be set via `with_params(...)`.
         """
         executor = QueryExecutor()
         return executor.fetch(
@@ -217,12 +219,14 @@ class Query:
         return self._temporal_extent
     
     @property
-    def options(self) -> Dict[str, Any]:
-        return self._options
+    def params(self) -> Dict[str, Any]:
+        return self._params
+
     
     # Private methods
     def _from_source(self, source: str) -> Query:
-        """Query from a single source.
+        """
+        Query from a single source.
         
         Args:
             source (str): Data source name (e.g., 'nasa_earthdata', 'aviso_altimetry').

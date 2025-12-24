@@ -9,10 +9,12 @@ __version__ = "1.0.0"
 # Import main classes for easy access
 from . import auth
 from .core.registry import registry
+from . import plugins
 from .api import query
 
 __all__ = [
-    "query",
     "auth",
     "registry",
+    "plugins",
+    "query",
 ]
