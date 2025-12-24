@@ -32,6 +32,10 @@ class CredentialManager:
         CredentialManager._validate_credentials(matched_source, credentials)
 
         # Store and update registry
+        existing = keyring.get_password(CredentialManager.SERVICE_NAME, matched_source)
+        if existing:
+            print(f"Warning: overwriting a set of existing credentials for '{matched_source}'.")
+
         keyring.set_password(
             CredentialManager.SERVICE_NAME,
             matched_source,
