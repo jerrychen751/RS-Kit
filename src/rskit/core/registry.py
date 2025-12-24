@@ -73,17 +73,49 @@ class PluginRegistry:
             )
 
         plugin_class = self._get_plugin_class(matched_source)
-        plugin_instance = plugin_class()
 
-        if not hasattr(plugin_instance, "get_credential_schema"):
+        if not hasattr(plugin_class, "get_credential_schema"):
             raise ValueError(
                 f"Plugin for source '{source}' does not define a credential schema."
             )
 
-        schema = plugin_instance.get_credential_schema()
+        schema = plugin_class.get_credential_schema()
         if not isinstance(schema, dict):
             raise ValueError(
                 f"Credential schema for source '{source}' must be a dict, got {type(schema).__name__}."
+            )
+        return schema
+
+    def get_params_schema(self, source: str) -> Dict[str, object]:
+        """
+        Return the query parameter schema for a given data source, describing plugin-specific
+        parameters required by the source.
+
+        Args:
+            source (str): Data source identifier.
+
+        Returns:
+            Dict[str, object]: Plugin-defined params schema.
+
+        Raises:
+            ValueError: If the source is unknown or the plugin does not define a params schema.
+        """
+        matched_source = self._match_source_name(source)
+        if matched_source != source:
+            print(
+                f"Warning: '{source}' is not supported. Getting params schema for '{matched_source}'."
+            )
+
+        plugin_class = self._get_plugin_class(matched_source)
+        if not hasattr(plugin_class, "get_params_schema"):
+            raise ValueError(
+                f"Plugin for source '{source}' does not define a params schema."
+            )
+
+        schema = plugin_class.get_params_schema()
+        if not isinstance(schema, dict):
+            raise ValueError(
+                f"Params schema for source '{source}' must be a dict, got {type(schema).__name__}."
             )
         return schema
 

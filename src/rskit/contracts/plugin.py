@@ -25,17 +25,30 @@ from ..core.query import Query
 
 
 class DataSourcePlugin(ABC):
-    name: str
-    CREDENTIAL_SCHEMA: Dict[str, Any]
+    CREDENTIAL_SCHEMA: Dict[str, Any] = {}
+    PARAMS_SCHEMA: Dict[str, Any] = {}
 
-    def get_credential_schema(self) -> Dict[str, Any]:
+    @classmethod
+    def get_credential_schema(cls) -> Dict[str, Any]:
         """Return the credential schema required for authentication.
 
         Returns:
             Dict[str, Any]: A dictionary describing the required credential parameters
             (e.g., username, password, token) and their properties (such as type, optionality).
         """
-        return self.CREDENTIAL_SCHEMA
+        return cls.CREDENTIAL_SCHEMA
+
+    @classmethod
+    def get_params_schema(cls) -> Dict[str, Any]:
+        """Return the schema for plugin-specific query parameters.
+
+        Returns:
+            Dict[str, Any]: A dictionary describing required and optional query parameters
+            specific to the plugin (e.g., collection identifiers, product codes).
+            Common keys include required_fields, required_any_of, optional_fields,
+            field_descriptions, and notes.
+        """
+        return cls.PARAMS_SCHEMA
     
     @abstractmethod
     def supports_variable(self, variable: str) -> bool:

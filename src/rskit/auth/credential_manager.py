@@ -113,11 +113,10 @@ class CredentialManager:
             ValueError: If required credential fields are missing, the number of provided fields does not match the required fields, or the plugin does not define a credential schema.
         """
         plugin_class = registry._get_plugin_class(source)
-        plugin_instance = plugin_class()
 
-        if hasattr(plugin_instance, 'get_credential_schema'):
+        if hasattr(plugin_class, 'get_credential_schema'):
             try:
-                schema = plugin_instance.get_credential_schema()
+                schema = plugin_class.get_credential_schema()
                 required_fields: List[str] = schema['required_fields']
 
                 for field in required_fields:
