@@ -1,0 +1,23 @@
+{
+  "credential_schema": {
+    "required_fields": ["ftp_host", "username", "password"],
+    "field_descriptions": {
+      "ftp_host": "AVISO FTP server hostname",
+      "username": "AVISO FTP username",
+      "password": "AVISO FTP password"
+    }
+  },
+  "params_schema": {
+    "required_fields": ["file_identifier", "version", "variant"],
+    "optional_fields": ["download_dir"],
+    "field_descriptions": {
+      "file_identifier": "AVISO product identifier (e.g., 'SWOT_L3_LR_SSH').",
+      "version": "Product version from the catalog (e.g., 'v1_0').",
+      "variant": "Product variant from the catalog (e.g., 'Expert').",
+      "download_dir": "Override download destination directory."
+    },
+    "notes": [
+      "Query.time(...) is required for AVISO downloads."
+    ]
+  }
+}

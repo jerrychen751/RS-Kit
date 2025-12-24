@@ -23,4 +23,4 @@ plugins/
 
 ## Credentials
 
-Credential requirements are documented centrally in [docs/credentials.md](../../../docs/credentials.md) and generated from each plugin's `CREDENTIAL_SCHEMA`.
+Credential requirements are documented centrally in [docs/credentials.md](../../../docs/credentials.md) and generated from each plugin's `schema.json`.

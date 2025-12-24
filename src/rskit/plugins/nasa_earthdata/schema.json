@@ -1,0 +1,41 @@
+{
+  "credential_schema": {
+    "required_fields": ["username", "password", "token"],
+    "field_descriptions": {
+      "username": "NASA Earthdata username",
+      "password": "NASA Earthdata password",
+      "token": "Bearer token to access application services integrated with the Earthdata Login system"
+    }
+  },
+  "params_schema": {
+    "required_fields": [],
+    "required_any_of": [
+      [
+        ["collection_concept_id"],
+        ["collection_doi"],
+        ["collection_short_name", "collection_version"]
+      ]
+    ],
+    "optional_fields": [
+      "cloud_cover",
+      "sort_key",
+      "max_granules",
+      "download_dir",
+      "drop_nan_lines"
+    ],
+    "field_descriptions": {
+      "collection_concept_id": "CMR collection concept ID.",
+      "collection_doi": "Collection DOI (e.g., '10.5067/SWOT-L2_HR_PIXC-2.0').",
+      "collection_short_name": "Collection short name (requires collection_version).",
+      "collection_version": "Collection version (requires collection_short_name).",
+      "cloud_cover": "Tuple of (min_percent, max_percent) for cloud cover filtering.",
+      "sort_key": "CMR sort key (e.g., '-start_date').",
+      "max_granules": "Maximum number of granules to return/download.",
+      "download_dir": "Override download destination directory.",
+      "drop_nan_lines": "Drop all-NaN lines during client-side subsetting."
+    },
+    "notes": [
+      "Query.time(...) and Query.region(...) are required for NASA Earthdata downloads."
+    ]
+  }
+}

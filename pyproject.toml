@@ -44,5 +44,6 @@ rskit = [
     "plugins/aviso_altimetry/data/**/*.cpg",
     "plugins/aviso_altimetry/data/**/*.sbn",
     "plugins/aviso_altimetry/data/**/*.sbx",
-    "plugins/aviso_altimetry/data/**/*.json"
+    "plugins/aviso_altimetry/data/**/*.json",
+    "plugins/**/schema.json"
 ]

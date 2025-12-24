@@ -30,15 +30,6 @@ class SearchParameters:
 class NasaEarthdata(DataSourcePlugin):
     """NASA Earthdata plugin leveraging the CMR API for discovery and downloads."""
 
-    CREDENTIAL_SCHEMA = {
-        "required_fields": ["username", "password", "token"],
-        "field_descriptions": {
-            "username": "NASA Earthdata username",
-            "password": "NASA Earthdata password",
-            "token": "Bearer token to access application services integrated with the Earthdata Login system",
-        },
-    }
-
     _DEFAULT_FOLDER = "rskit-nasa_earthdata"
 
     def __init__(self) -> None:
@@ -79,12 +70,10 @@ class NasaEarthdata(DataSourcePlugin):
         variables available in the specified collection.
         
         Args:
-            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0"). This alone
-                is sufficient to identify a collection.
-            short_name: Collection short name (e.g., "SWOT_L2_HR_PIXC_2.0").
-                Requires version to be specified.
-            version: Collection version (e.g., "2.0"). Required with short_name.
-            keyword: Optional keyword to filter variables by name or description.
+            doi: Collection DOI (e.g., "10.5067/SWOT-L2_HR_PIXC-2.0"). This alone is sufficient to identify a collection.
+            short_name: Collection short name (e.g., "PACE_OCI_L3M_RRS").
+            version: Collection version (e.g., "3.1").
+            keyword: Optional keyword filters to include in CMR API call.
             
         Returns:
             List of variable metadata dictionaries containing:
@@ -213,7 +202,7 @@ class NasaEarthdata(DataSourcePlugin):
         with automatic fallback to client-side subsetting.
         
         Args:
-            query: Query with spatial/temporal extents and options.
+            query: Query with spatial/temporal extents and params.
             destination: Directory to save downloaded files.
             limit: Maximum number of granules to process.
             skip_existing: Skip files that already exist locally.
@@ -349,20 +338,20 @@ class NasaEarthdata(DataSourcePlugin):
             float(query.spatial_extent.lat_max),
         )
 
-        options = query.options
-        collection_id = options.get("collection_concept_id")
+        params = query.params
+        collection_id = params.get("collection_concept_id")
         if not collection_id:
-            collection_id = self._resolve_collection_concept_id(options)
+            collection_id = self._resolve_collection_concept_id(params)
 
-        resolved_limit = limit or options.get("max_granules")
+        resolved_limit = limit or params.get("max_granules")
 
-        cloud_cover = options.get("cloud_cover")
+        cloud_cover = params.get("cloud_cover")
         if cloud_cover and len(cloud_cover) != 2:
             raise ValueError("cloud_cover must be a tuple of (min_percent, max_percent).")
 
-        sort_key = options.get("sort_key")
+        sort_key = params.get("sort_key")
 
-        destination_path = self._resolve_destination(destination, options.get("download_dir"))
+        destination_path = self._resolve_destination(destination, params.get("download_dir"))
 
         return SearchParameters(
             collection_id,
@@ -391,12 +380,12 @@ class NasaEarthdata(DataSourcePlugin):
             urls = urls[: params.limit]
         return granules, urls
 
-    def _resolve_collection_concept_id(self, options: Dict[str, Any]) -> str:
-        doi = options.get("collection_doi")
-        short_name = options.get("collection_short_name")
-        version = options.get("collection_version")
+    def _resolve_collection_concept_id(self, params: Dict[str, Any]) -> str:
+        doi = params.get("collection_doi")
+        short_name = params.get("collection_short_name")
+        version = params.get("collection_version")
 
-        concept_id, _ = self._client.resolve_collection(
+        concept_id, _ = self._client.get_collection_info(
             doi=doi,
             short_name=short_name,
             version=version,
@@ -405,7 +394,7 @@ class NasaEarthdata(DataSourcePlugin):
             raise ValueError(
                 "Unable to resolve collection concept ID. Provide either "
                 "`collection_concept_id`, `collection_doi`, or both "
-                "`collection_short_name` and `collection_version` in query options."
+                "`collection_short_name` and `collection_version` in query params."
             )
         return concept_id
 
@@ -451,7 +440,7 @@ class NasaEarthdata(DataSourcePlugin):
         return datasets
 
     def _subset_dataset(self, dataset: xr.Dataset, query: Query) -> xr.Dataset:
-        drop_nan_lines = query.options.get("drop_nan_lines", True)
+        drop_nan_lines = query.params.get("drop_nan_lines", True)
         return subset_dataset(
             dataset,
             query.spatial_extent,
