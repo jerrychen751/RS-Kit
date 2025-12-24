@@ -1,6 +1,5 @@
 notes/
 examples/
-.github/
 
 # Python build artifacts
 __pycache__/
