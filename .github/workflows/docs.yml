@@ -1,0 +1,36 @@
+name: Credential/Params Schema & Docs Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate plugin schemas
+        run: python scripts/validate_plugin_schemas.py
+
+  docs-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Generate docs
+        run: |
+          python scripts/docs/generate_credentials_docs.py
+          python scripts/docs/generate_query_params_docs.py
+      - name: Check for doc drift
+        run: git diff --exit-code -- docs/credentials.md docs/query_params.md
