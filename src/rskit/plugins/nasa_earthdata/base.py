@@ -11,7 +11,7 @@ from ...auth.credential_manager import CredentialManager
 from ...contracts.plugin import DataSourcePlugin
 from ...core.query import Query
 from ...utils.downloads import ensure_downloads_directory
-from .cmr import CMRClient
+from .cmr import CmrClient
 from .harmony import HarmonyClient, HarmonyJob
 from .subset import subset_dataset
 
@@ -42,7 +42,7 @@ class NasaEarthdata(DataSourcePlugin):
             )
 
         self._credentials = credentials
-        self._client = CMRClient(token=credentials["token"])
+        self._client = CmrClient(token=credentials["token"])
         self._harmony_client: Optional[HarmonyClient] = None
     
     @property
@@ -56,7 +56,7 @@ class NasaEarthdata(DataSourcePlugin):
         return self._harmony_client
 
     # Public API methods
-    def discover(
+    def list_supported_variables(
         self,
         *,
         doi: Optional[str] = None,
@@ -64,7 +64,7 @@ class NasaEarthdata(DataSourcePlugin):
         version: Optional[str] = None,
         keyword: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Discover available variables for a NASA Earthdata collection.
+        """List supported variables for a NASA Earthdata collection.
         
         Queries the CMR Variables API to return metadata about all science
         variables available in the specified collection.
@@ -94,15 +94,15 @@ class NasaEarthdata(DataSourcePlugin):
         Example:
             >>> plugin = NasaEarthdata()
             >>> # Using DOI (preferred - found in Earthdata Search)
-            >>> variables = plugin.discover(doi="10.5067/SWOT-L2_HR_PIXC-2.0")
+            >>> variables = plugin.list_supported_variables(doi="10.5067/SWOT-L2_HR_PIXC-2.0")
             >>> 
             >>> # Using short_name + version
-            >>> variables = plugin.discover(short_name="SWOT_L2_HR_PIXC_2.0", version="2.0")
+            >>> variables = plugin.list_supported_variables(short_name="SWOT_L2_HR_PIXC_2.0", version="2.0")
             >>> 
             >>> for var in variables[:5]:
             ...     print(f"{var['name']}: {var['long_name']}")
         """
-        variables = self._client.search_variables(
+        variables = self._client.get_collection_variables(
             doi=doi,
             short_name=short_name,
             version=version,
@@ -133,10 +133,13 @@ class NasaEarthdata(DataSourcePlugin):
         Raises:
             ValueError: If neither doi nor both short_name and version are provided.
         """
-        variable_names = self._client.get_variable_names(
-            doi=doi, short_name=short_name, version=version
+        variables = self.list_supported_variables(
+            doi=doi,
+            short_name=short_name,
+            version=version,
         )
-        return variable.lower() in [v.lower() for v in variable_names]
+        needle = variable.lower()
+        return any(v.get("name", "").lower() == needle for v in variables)
     
     def supports_harmony(self, collection_concept_id: str) -> bool:
         """Check if a collection supports Harmony server-side subsetting.

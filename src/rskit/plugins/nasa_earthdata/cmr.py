@@ -15,7 +15,7 @@ import requests
 CollectionInfo = Tuple[str, dict]
 
 
-class CMRClient:
+class CmrClient:
     """
     Client for the NASA CMR API.
     """
@@ -62,7 +62,7 @@ class CMRClient:
         # Build params dictionary
         params = {}
         if doi:
-            params["doi"] = self._normalize_doi(doi)
+            params["doi"] = CmrClient._normalize_doi(doi)
         elif short_name and version:
             params["short_name"] = short_name
             params["version"] = str(version)
