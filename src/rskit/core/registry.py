@@ -1,4 +1,4 @@
-"""Plugin registry for managing data source plugins."""
+"""Plugin registry for managing plugins."""
 
 from __future__ import annotations
 
@@ -14,25 +14,25 @@ PluginSpec = Tuple[str, str]
 
 class PluginRegistry:
     """
-    Manages data source plugins and supported source discovery.
+    Manages plugins and supported plugin discovery.
     """
 
     def __init__(self) -> None:
-        # Map plugin source name to import path and class name
+        # Map plugin identifier to import path and class name
         self._plugin_specs: Dict[str, PluginSpec] = {
             "nasa_earthdata": ("rskit.plugins.nasa_earthdata.base", "NasaEarthdata"),
             "aviso_altimetry": ("rskit.plugins.aviso_altimetry.base", "AvisoAltimetry"),
         }
-        # Map plugin source name to class
+        # Map plugin identifier to class
         self._plugins: Dict[str, Type["DataSourcePlugin"]] = {}
 
     # Public API methods
-    def get_supported_sources(self) -> List[str]:
+    def get_supported_plugins(self) -> List[str]:
         """
-        Returns a list of all supported data source identifiers.
+        Returns a list of all supported plugin identifiers.
 
         Returns:
-            List[str]: A copy of the list of supported sources.
+            List[str]: A copy of the list of supported plugins.
         """
         return list(self._plugin_specs.keys())
     
@@ -41,7 +41,7 @@ class PluginRegistry:
         Get a plugin instance for the specified source.
         
         Args:
-            source (str): Data source identifier. Use `get_supported_sources()` to see supported data sources.
+            source (str): Plugin identifier. Use `get_supported_plugins()` to see supported plugins.
             
         Returns:
             Optional[DataSourcePlugin]: Plugin instance, or None if source not found.
@@ -122,13 +122,13 @@ class PluginRegistry:
     # Private helper methods
     def _match_source_name(self, source: str) -> str:
         """
-        Finds the closest matching supported data source.
+        Finds the closest matching supported plugin.
 
         Args:
             source (str): Data source identifier to match.
 
         Returns:
-            str: The best-matched supported source.
+            str: The best-matched supported plugin.
 
         Raises:
             ValueError: If no supported source closely matches the input source.
@@ -136,15 +136,15 @@ class PluginRegistry:
         source = source.lower()
         match: List[str] = difflib.get_close_matches(
             word=source,
-            possibilities=self.get_supported_sources(),
+            possibilities=self.get_supported_plugins(),
             n=1,
             cutoff=0.7
         )
 
         if not match:
-            supported = self.get_supported_sources()
+            supported = self.get_supported_plugins()
             raise ValueError(
-                f"Unknown data source '{source}'. Supported sources are: {supported}"
+                f"Unknown plugin '{source}'. Supported plugins are: {supported}"
             )
 
         matched_source: str = match[0]

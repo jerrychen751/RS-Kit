@@ -9,9 +9,9 @@ from .nasa_earthdata.base import NasaEarthdata
 from .aviso_altimetry.base import AvisoAltimetry
 
 
-def list_supported_sources():
-    """Return the list of supported data source identifiers."""
-    return registry.get_supported_sources()
+def list_supported_plugins():
+    """Return the list of supported plugin identifiers."""
+    return registry.get_supported_plugins()
 
 
 def get_params_schema(source: str):
@@ -21,6 +21,6 @@ def get_params_schema(source: str):
 __all__ = [
     "NasaEarthdata",
     "AvisoAltimetry",
-    "list_supported_sources",
+    "list_supported_plugins",
     "get_params_schema",
 ]

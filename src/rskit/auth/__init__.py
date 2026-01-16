@@ -49,7 +49,7 @@ def list_added_credentials():
     return CredentialManager.list_added_credentials()
 
 def list_supported_sources():
-    return registry.get_supported_sources()
+    return registry.get_supported_plugins()
 
 def get_credential_schema(source: str):
     return registry.get_credential_schema(source)
