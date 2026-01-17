@@ -10,15 +10,6 @@ from datetime import datetime
 from typing import Optional
 
 
-def get_downloads_directory() -> Path:
-    """Get the user's Downloads directory.
-    
-    Returns:
-        Path: Path to the user's Downloads directory.
-    """
-    return Path.home() / "Downloads"
-
-
 def create_download_folder(
     data_source: str,
     timestamp: Optional[datetime] = None
@@ -32,7 +23,7 @@ def create_download_folder(
     Returns:
         Path: Path to the created download folder.
     """
-    downloads_dir = get_downloads_directory()
+    downloads_dir = Path.home() / "Downloads"
     
     # Create folder with rskit- prefix and data source + timestamp
     if timestamp:
@@ -74,7 +65,7 @@ def ensure_downloads_directory() -> Path:
     Raises:
         OSError: If the Downloads directory cannot be created or accessed.
     """
-    downloads_dir = get_downloads_directory()
+    downloads_dir = Path.home() / "Downloads"
     
     try:
         downloads_dir.mkdir(parents=True, exist_ok=True)
