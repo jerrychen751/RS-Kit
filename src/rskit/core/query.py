@@ -24,25 +24,12 @@ class Query:
         self._source: Optional[str] = None
         self._spatial_extent: Optional[SpatialExtent] = None
         self._temporal_extent: Optional[TemporalExtent] = None
-        self._variable_name: Optional[str] = None
         self._params: Dict[str, Any] = {}
 
         # FTP servers
         self._data_path: Optional[str] = None
     
     # Public API methods
-    def variable(self, name: str) -> Query:
-        """Set the variable to query.
-        
-        Args:
-            name (str): Dataset-specific variable name.
-            
-        Returns:
-            (Query): Query instance for method chaining.
-        """
-        self._variable_name = name
-        return self
-
     def path(self, data_path: str) -> Query:
         self._data_path = data_path
         return self
@@ -192,10 +179,6 @@ class Query:
     def source(self) -> Optional[str]:
         return self._source
     
-    @property
-    def variable_name(self) -> Optional[str]:
-        return self._variable_name
-
     @property
     def data_path(self) -> Optional[str]:
         return self._data_path

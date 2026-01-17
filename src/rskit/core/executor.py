@@ -32,7 +32,6 @@ class QueryExecutor:
         skip_existing: bool = True,
     ) -> List[Path]:
         plugin = self._get_plugin(query)
-        self._validate_variable_support(plugin, query)
 
         try:
             return plugin.download(
@@ -56,7 +55,6 @@ class QueryExecutor:
         **plugin_kwargs: Any,
     ) -> xr.Dataset:
         plugin = self._get_plugin(query)
-        self._validate_variable_support(plugin, query)
 
         try:
             return plugin.fetch(
@@ -118,11 +116,3 @@ class QueryExecutor:
             raise ValueError(f"No plugin found for source '{query.source}'.")
 
         return plugin
-
-    @staticmethod
-    def _validate_variable_support(plugin: DataSourcePlugin, query: Query) -> None:
-        if query.variable_name and hasattr(plugin, "supports_variable"):
-            if not plugin.supports_variable(query.variable_name):
-                raise ValueError(
-                    f"Variable '{query.variable_name}' not supported by source '{query.source}'."
-                )
