@@ -50,8 +50,8 @@ class NasaEarthdataCollection:
 
     def supports_variable(self, variable: str) -> bool:
         return self._plugin.supports_variable(
+            self.collection_concept_id,
             variable,
-            collection_concept_id=self.collection_concept_id,
         )
 
     def supports_harmony(self) -> bool:
@@ -149,15 +149,14 @@ class NasaEarthdata(DataSourcePlugin):
 
     def supports_variable(
         self,
-        variable: str,
-        *,
         collection_concept_id: str,
+        variable: str,
     ) -> bool:
         """Check if a collection supports a specific variable.
         
         Args:
-            variable: Variable name to check (e.g., "ssha", "ssh_karin").
             collection_concept_id: CMR collection concept ID.
+            variable: Variable name to check (e.g., "ssha", "ssh_karin").
             
         Returns:
             True if the variable is available in the collection.
