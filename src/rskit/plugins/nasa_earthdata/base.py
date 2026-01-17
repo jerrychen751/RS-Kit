@@ -43,7 +43,7 @@ class NasaEarthdataCollection:
         umm: bool = False,
     ) -> List[Dict[str, Any]]:
         return self._plugin.list_supported_variables(
-            collection_concept_id=self.collection_concept_id,
+            self.collection_concept_id,
             keyword=keyword,
             umm=umm,
         )
@@ -95,8 +95,8 @@ class NasaEarthdata(DataSourcePlugin):
     # Public API methods
     def list_supported_variables(
         self,
-        *,
         collection_concept_id: str,
+        *,
         keyword: Optional[str] = None,
         umm: bool = False,
     ) -> List[Dict[str, Any]]:
@@ -132,9 +132,7 @@ class NasaEarthdata(DataSourcePlugin):
             >>> collection_id = plugin.resolve_collection_concept_id(
             ...     doi="10.5067/SWOT-L2_HR_PIXC-2.0"
             ... )
-            >>> variables = plugin.list_supported_variables(
-            ...     collection_concept_id=collection_id
-            ... )
+            >>> variables = plugin.list_supported_variables(collection_id)
             >>> 
             >>> for var in variables[:5]:
             ...     print(f"{var['name']}: {var['long_name']}")
@@ -164,9 +162,7 @@ class NasaEarthdata(DataSourcePlugin):
         Raises:
             ValueError: If collection_concept_id is missing.
         """
-        variables = self.list_supported_variables(
-            collection_concept_id=collection_concept_id,
-        )
+        variables = self.list_supported_variables(collection_concept_id)
         needle = variable.lower()
         return any(v.get("name", "").lower() == needle for v in variables)
 
