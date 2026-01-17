@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
@@ -167,7 +166,7 @@ class Query:
         Notes:
             Additional keyword arguments are forwarded to the active source plugin's
             `fetch()` implementation. This enables plugin-specific fetch kwargs such as
-            NASA Earthdata Harmony subsetting (e.g., `use_harmony`, `variables`).
+            NASA Earthdata Harmony subsetting (e.g., `variables`).
             Plugin-specific query params should be set via `with_params(...)`.
         """
         executor = QueryExecutor()
@@ -179,15 +178,6 @@ class Query:
             **plugin_kwargs,
         )
 
-    def execute(self) -> xr.Dataset:
-        """Deprecated alias for fetch."""
-        warnings.warn(
-            "Query.execute() is deprecated. Use Query.fetch() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.fetch()
-    
     def estimate_size(self) -> Optional[int]:
         """Estimate query cost before execution.
         
