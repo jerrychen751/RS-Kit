@@ -204,7 +204,7 @@ class NasaEarthdata(DataSourcePlugin):
         Returns:
             True if Harmony subsetting is available for the collection.
         """
-        return self.harmony.supports_harmony(collection_concept_id)
+        return self.harmony.supports_collection(collection_concept_id)
 
     def get_harmony_capabilities(self, collection_concept_id: str) -> Dict[str, Any]:
         """Get Harmony capabilities for a collection.

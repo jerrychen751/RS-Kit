@@ -122,7 +122,7 @@ class HarmonyClient:
         
         return response.json()
     
-    def supports_harmony(self, collection_id: str) -> bool:
+    def supports_collection(self, collection_id: str) -> bool:
         """Check if a collection is configured for Harmony processing.
         
         Args:
