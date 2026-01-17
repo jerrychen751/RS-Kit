@@ -166,7 +166,7 @@ class NasaEarthdata(DataSourcePlugin):
         target = variable.lower()
         return any(v.get("name", "").lower().split('/')[-1] == target for v in variables)
 
-    def resolve_collection_concept_id(
+    def get_collection_concept_id(
         self,
         *,
         doi: Optional[str] = None,
