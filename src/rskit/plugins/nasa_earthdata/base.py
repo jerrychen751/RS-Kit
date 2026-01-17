@@ -11,7 +11,7 @@ from ...auth.credential_manager import CredentialManager
 from ...contracts.plugin import DataSourcePlugin
 from ...core.query import Query
 from ...utils.downloads import ensure_downloads_directory
-from .cmr import CmrClient
+from .cmr import CmrClient, CollectionInfo
 from .harmony import HarmonyClient, HarmonyJob
 from .subset import subset_dataset
 
@@ -60,7 +60,7 @@ class NasaEarthdataCollection:
     def get_harmony_capabilities(self) -> Dict[str, Any]:
         return self._plugin.get_harmony_capabilities(self.collection_concept_id)
 
-    def get_collection_info(self) -> Dict[str, Any]:
+    def get_collection_info(self) -> List[CollectionInfo]:
         return self._plugin.get_collection_info(self.collection_concept_id)
 
 
@@ -180,8 +180,22 @@ class NasaEarthdata(DataSourcePlugin):
             version=version,
         )
 
-    def get_collection_info(self, collection_concept_id: str) -> Dict[str, Any]:
-        """Fetch CMR collection metadata for a concept ID."""
+    def get_collection_info(self, collection_concept_id: str) -> List[CollectionInfo]:
+        """
+        Returns CMR collection metadata for a concept ID.
+
+        Args:
+            collection_concept_id (str): CMR collection concept ID.
+        
+        Returns:
+            List of collection metadata dictionaries.
+
+        Raises:
+            ValueError: If collection_concept_id is missing or no collection is found.
+        """
+        if not collection_concept_id:
+            raise ValueError("collection_concept_id is required to fetch collection info.")
+
         return self._client.get_collection_info(
             collection_concept_id=collection_concept_id,
         )

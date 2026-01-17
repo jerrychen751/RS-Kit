@@ -90,34 +90,26 @@ class CmrClient:
     def get_collection_info(
         self,
         collection_concept_id: str,
-    ) -> CollectionInfo:
+    ) -> List[CollectionInfo]:
         """
-        Fetch collection metadata for a specific concept ID.
+        Fetch collection metadata for a specific concept ID. Assumes valid concept ID is provided.
 
         Args:
-            collection_concept_id: CMR collection concept ID.
+            collection_concept_id (str): CMR collection concept ID.
 
         Returns:
-            Collection metadata dictionary.
+            List of collection metadata dictionaries.
 
         Raises:
-            ValueError: If collection_concept_id is missing or no collection is found.
+            ValueError: If no collection is found.
         """
-        if not collection_concept_id:
-            raise ValueError("collection_concept_id is required to fetch collection info.")
-
         entries = self._search_collections({"concept_id": collection_concept_id})
         if not entries:
             raise ValueError(
                 f"No collection results returned for concept_id '{collection_concept_id}'."
             )
-        if len(entries) > 1:
-            raise ValueError(
-                "Multiple collections returned for concept_id "
-                f"'{collection_concept_id}', which should be unique."
-            )
 
-        return entries[0]
+        return entries
 
     def search_granules(
         self,
@@ -340,7 +332,19 @@ class CmrClient:
         return downloaded
 
     # Private helper methods
-    def _search_collections(self, params: Dict[str, str]) -> List[dict]:
+    def _search_collections(self, params: Dict[str, str]) -> List[CollectionInfo]:
+        """
+        Search for collections using a set of CMR API parameters. Returns a list of collection metadata dictionaries from the CMR API response.
+
+        Args:
+            params (Dict[str, str]): CMR API parameters.
+
+        Returns:
+            List of collection metadata dictionaries.
+
+        Raises:
+            requests.RequestException: If the request fails.
+        """
         response = self._session.get(
             self.COLLECTIONS_URL,
             params=params,
