@@ -112,7 +112,6 @@ class NasaEarthdata(DataSourcePlugin):
             
         Returns:
             When umm is False, list of variable metadata dictionaries containing:
-                - concept_id: CMR variable concept ID
                 - name: Variable name (e.g., "/pixel_cloud/ssha")
                 - long_name: Human-readable description
                 - definition: Detailed variable definition
@@ -122,6 +121,7 @@ class NasaEarthdata(DataSourcePlugin):
                 - scale: Scale factor if applicable
                 - offset: Offset value if applicable
                 - fill_value: Fill/missing value
+                - concept_id: CMR variable concept ID
             When umm is True, a list of raw UMM metadata dictionaries.
                 
         Raises:
@@ -163,8 +163,8 @@ class NasaEarthdata(DataSourcePlugin):
             ValueError: If collection_concept_id is missing.
         """
         variables = self.list_supported_variables(collection_concept_id)
-        needle = variable.lower()
-        return any(v.get("name", "").lower() == needle for v in variables)
+        target = variable.lower()
+        return any(v.get("name", "").lower().split('/')[-1] == target for v in variables)
 
     def resolve_collection_concept_id(
         self,

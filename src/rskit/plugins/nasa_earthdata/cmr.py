@@ -248,7 +248,6 @@ class CmrClient:
                 else:
                     collected.append(
                         {
-                            "concept_id": var_id,
                             "name": umm_meta.get("Name", ""),
                             "long_name": umm_meta.get("LongName", ""),
                             "definition": umm_meta.get("Definition", ""),
@@ -265,6 +264,7 @@ class CmrClient:
                                 if umm_meta.get("FillValues")
                                 else None
                             ),
+                            "concept_id": var_id,
                         }
                     )
             except requests.RequestException:
