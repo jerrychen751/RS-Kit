@@ -117,7 +117,7 @@ class DataSourcePlugin(ABC):
         ...
     
     @abstractmethod
-    def download(
+    def download_data(
         self,
         query: Query,
         destination: Optional[Path] = None,
@@ -132,16 +132,3 @@ class DataSourcePlugin(ABC):
         """
         ...
 
-    @abstractmethod
-    def fetch(
-        self,
-        query: Query,
-        destination: Optional[Path] = None,
-        *,
-        limit: Optional[int] = None,
-        skip_existing: bool = True,
-        **kwargs: Any,
-    ) -> xr.Dataset:
-        """Fetch data for the given query, downloading if necessary.
-        """
-        ...
