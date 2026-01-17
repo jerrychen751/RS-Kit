@@ -13,7 +13,6 @@ def subset_dataset(
     dataset: xr.Dataset,
     spatial_extent: Optional[SpatialExtent],
     temporal_extent: Optional[TemporalExtent],
-    *,
     drop_nan_lines: bool = True,
     lon_names: Iterable[str] = ("lon", "longitude"),
     lat_names: Iterable[str] = ("lat", "latitude"),
@@ -59,4 +58,3 @@ def _select_coordinate(
         if name in dataset:
             return dataset[name]
     return None
-

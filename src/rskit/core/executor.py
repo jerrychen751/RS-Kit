@@ -27,7 +27,6 @@ class QueryExecutor:
         self,
         query: Query,
         destination: Optional[Path] = None,
-        *,
         limit: Optional[int] = None,
         skip_existing: bool = True,
     ) -> List[Path]:
@@ -49,7 +48,6 @@ class QueryExecutor:
         self,
         query: Query,
         destination: Optional[Path] = None,
-        *,
         limit: Optional[int] = None,
         skip_existing: bool = True,
         **plugin_kwargs: Any,

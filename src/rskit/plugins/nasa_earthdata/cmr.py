@@ -38,7 +38,6 @@ class CmrClient:
     # Public API methods
     def resolve_collection_concept_id(
         self,
-        *,
         doi: Optional[str] = None,
         short_name: Optional[str] = None,
         version: Optional[str] = None,
@@ -90,7 +89,6 @@ class CmrClient:
 
     def get_collection_info(
         self,
-        *,
         collection_concept_id: str,
     ) -> CollectionInfo:
         """
@@ -123,7 +121,6 @@ class CmrClient:
 
     def search_granules(
         self,
-        *,
         collection_concept_id: str,
         temporal: Tuple[str, str],
         bbox: Tuple[float, float, float, float],
@@ -199,7 +196,6 @@ class CmrClient:
 
     def get_collection_variables(
         self,
-        *,
         collection_concept_id: str,
         keyword: Optional[str] = None,
         umm: bool = False,

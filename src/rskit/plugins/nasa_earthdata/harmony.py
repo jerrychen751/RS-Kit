@@ -144,7 +144,6 @@ class HarmonyClient:
     def subset(
         self,
         collection_id: str,
-        *,
         bbox: Optional[Tuple[float, float, float, float]] = None,
         temporal: Optional[Tuple[str, str]] = None,
         variables: Optional[List[str]] = None,
