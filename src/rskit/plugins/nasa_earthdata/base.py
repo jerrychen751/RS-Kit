@@ -250,12 +250,11 @@ class NasaEarthdata(DataSourcePlugin):
         *,
         limit: Optional[int] = None,
         skip_existing: bool = True,
-        use_harmony: Optional[bool] = None,
         variables: Optional[List[str]] = None,
     ) -> xr.Dataset:
         """Return an xarray.Dataset for granules matching the query.
         
-        Supports server-side subsetting via NASA Harmony when available,
+        Uses server-side subsetting via NASA Harmony when the collection supports it,
         with automatic fallback to client-side subsetting.
         
         Args:
@@ -263,7 +262,6 @@ class NasaEarthdata(DataSourcePlugin):
             destination: Directory to save downloaded files.
             limit: Maximum number of granules to process.
             skip_existing: Skip files that already exist locally.
-            use_harmony: Force Harmony usage (True), disable (False), or auto-detect (None).
             variables: List of variable names to subset (Harmony only).
             
         Returns:
@@ -271,14 +269,7 @@ class NasaEarthdata(DataSourcePlugin):
         """
         params = self._prepare_search_parameters(query, destination, limit)
         
-        # Determine whether to use Harmony
-        should_use_harmony = self._should_use_harmony(
-            use_harmony,
-            params.collection_id,
-            variables,
-        )
-        
-        if should_use_harmony:
+        if self.supports_harmony(params.collection_id):
             try:
                 return self._fetch_via_harmony(params, query, variables, skip_existing)
             except Exception as e:
@@ -305,24 +296,6 @@ class NasaEarthdata(DataSourcePlugin):
 
         dataset = self._load_dataset(file_paths)
         return self._subset_dataset(dataset, query)
-    
-    def _should_use_harmony(
-        self,
-        use_harmony: Optional[bool],
-        collection_id: str,
-        variables: Optional[List[str]],
-    ) -> bool:
-        """Determine whether to use Harmony for subsetting."""
-        # Explicit user preference
-        if use_harmony is not None:
-            return use_harmony
-        
-        # Auto-detect: use Harmony if collection supports it and variables requested
-        if variables:
-            return self.supports_harmony(collection_id)
-        
-        # Default to client-side for backward compatibility
-        return False
     
     def _fetch_via_harmony(
         self,

@@ -26,4 +26,7 @@ from rskit.plugins import NasaEarthdata
 ```
 
 Fetch-specific kwargs (passed directly to `Query.fetch(...)`):
-- `use_harmony`, `variables`.
+- `variables`.
+
+Harmony subsetting is used automatically when the collection supports it, with
+fallback to client-side processing if Harmony fails.
