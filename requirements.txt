@@ -8,30 +8,54 @@ annotated-types==0.7.0
     # via pydantic
 certifi==2025.10.5
     # via
+    #   netcdf4
     #   pyogrio
     #   pyproj
     #   requests
+cf-xarray==0.10.10
+    # via rskit (pyproject.toml)
+cftime==1.6.5
+    # via netcdf4
 charset-normalizer==3.4.4
     # via requests
 geopandas==1.1.1
     # via rskit (pyproject.toml)
 idna==3.11
     # via requests
+jaraco-classes==3.4.0
+    # via keyring
+jaraco-context==6.1.0
+    # via keyring
+jaraco-functools==4.4.0
+    # via keyring
+keyring==25.7.0
+    # via rskit (pyproject.toml)
+more-itertools==10.8.0
+    # via
+    #   jaraco-classes
+    #   jaraco-functools
+netcdf4==1.7.4
+    # via rskit (pyproject.toml)
 numpy==2.3.4
     # via
+    #   cftime
     #   geopandas
+    #   netcdf4
     #   pandas
     #   pyogrio
     #   rskit (pyproject.toml)
     #   shapely
+    #   xarray
 packaging==25.0
     # via
     #   geopandas
     #   pyogrio
+    #   xarray
 pandas==2.3.3
     # via
     #   geopandas
     #   rskit (pyproject.toml)
+    #   xarray
 pydantic==2.12.3
     # via rskit (pyproject.toml)
 pydantic-core==2.41.4
@@ -47,7 +71,9 @@ pytz==2025.2
 requests==2.32.5
     # via rskit (pyproject.toml)
 shapely==2.1.2
-    # via geopandas
+    # via
+    #   geopandas
+    #   rskit (pyproject.toml)
 six==1.17.0
     # via python-dateutil
 typing-extensions==4.15.0
@@ -61,3 +87,7 @@ tzdata==2025.2
     # via pandas
 urllib3==2.5.0
     # via requests
+xarray==2025.12.0
+    # via
+    #   cf-xarray
+    #   rskit (pyproject.toml)
