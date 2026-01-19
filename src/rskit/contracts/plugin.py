@@ -23,7 +23,6 @@ import json
 from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional
-import xarray as xr
 
 from ..core.query import Query
 
@@ -93,18 +92,6 @@ class DataSourcePlugin(ABC):
         """
         return cls._schema_section("params_schema")
     
-    @abstractmethod
-    def supports_variable(self, variable: str) -> bool:
-        """Check if this source supports a given variable.
-        
-        Args:
-            variable (str): Dataset-specific variable name (e.g., 'sst', 'thetao').
-            
-        Returns:
-            (bool): True if the variable is supported.
-        """
-        ...
-    
     def estimate_size(self, query: Query) -> Optional[int]:
         """Estimate download size in bytes.
         
@@ -131,4 +118,3 @@ class DataSourcePlugin(ABC):
         provide raw downloads, it should raise NotImplementedError.
         """
         ...
-

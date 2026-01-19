@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import List, Optional, TYPE_CHECKING, Any
-import inspect
-
-import xarray as xr
+from typing import List, Optional, TYPE_CHECKING
 
 from .registry import registry
 
@@ -43,60 +39,6 @@ class QueryExecutor:
             raise NotImplementedError(
                 f"Plugin '{query.source}' does not support download operations."
             ) from exc
-
-    def fetch(
-        self,
-        query: Query,
-        destination: Optional[Path] = None,
-        limit: Optional[int] = None,
-        skip_existing: bool = True,
-        **plugin_kwargs: Any,
-    ) -> xr.Dataset:
-        plugin = self._get_plugin(query)
-
-        try:
-            return plugin.fetch(
-                query,
-                destination=destination,
-                limit=limit,
-                skip_existing=skip_existing,
-                **plugin_kwargs,
-            )
-        except TypeError as exc:
-            # Improve UX when a plugin doesn't accept a provided keyword.
-            msg = str(exc)
-            if "unexpected keyword argument" in msg and plugin_kwargs:
-                try:
-                    sig = inspect.signature(plugin.fetch)
-                    supported = [
-                        name
-                        for name, param in sig.parameters.items()
-                        if param.kind
-                        in (
-                            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            inspect.Parameter.KEYWORD_ONLY,
-                        )
-                        and name not in {"self", "query", "destination", "limit", "skip_existing"}
-                    ]
-                except Exception:
-                    supported = []
-
-                supported_hint = (
-                    f" Supported plugin fetch options: {sorted(supported)}." if supported else ""
-                )
-                raise TypeError(
-                    f"Plugin '{query.source}' does not support one or more provided fetch options: "
-                    f"{sorted(plugin_kwargs.keys())}." + supported_hint
-                ) from exc
-            raise
-
-    def execute(self, query: Query) -> xr.Dataset:
-        warnings.warn(
-            "QueryExecutor.execute() is deprecated. Use QueryExecutor.fetch() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.fetch(query)
 
     def estimate_size(self, query: Query) -> Optional[int]:
         plugin = self._registry.get_plugin(query.source) if query.source else None

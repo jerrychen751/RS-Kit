@@ -18,7 +18,7 @@ plugins/
 
 **Components**:
 
-- `base.py`: Authentication + query execution (`download()` / `fetch()`) and any source-specific helpers.
+- `base.py`: Authentication + query execution (`download()`) and any source-specific helpers.
 - `data/`: Non-Python assets shipped with the package (see `pyproject.toml` package-data).
 
 ## Credentials
