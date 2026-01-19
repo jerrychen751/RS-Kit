@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import requests
 
+if TYPE_CHECKING:
+    from .base import GranuleSearchParams
+
 
 @dataclass
-class HarmonyJob:
+class ProcessingJob:
     """Represents a Harmony processing job."""
     
     job_id: str
@@ -20,6 +24,11 @@ class HarmonyJob:
     links: List[Dict[str, str]]
     created_at: str
     updated_at: str
+    username: str = ""
+    request_url: str = ""
+    data_expiration: str = ""
+    num_input_granules: Optional[int] = None
+    labels: List[str] = field(default_factory=list)
     
     @property
     def is_complete(self) -> bool:
@@ -37,40 +46,42 @@ class HarmonyJob:
     def output_urls(self) -> List[str]:
         """Extract data output URLs from job links."""
         return [
-            link["href"] 
+            link["href"]
             for link in self.links 
-            if link.get("rel") == "data"
+            if link.get("rel") == "data" and link.get("href")
         ]
+
+    def get_link(self, rel: str) -> Optional[Dict[str, str]]:
+        """Return the first link dictionary with the given rel."""
+        for link in self.links:
+            if link.get("rel") == rel:
+                return link
+        return None
+
+    @property
+    def cancel_url(self) -> Optional[str]:
+        link = self.get_link("canceler")
+        return link.get("href") if link else None
+
+    @property
+    def pause_url(self) -> Optional[str]:
+        link = self.get_link("pauser")
+        return link.get("href") if link else None
+
+
+@dataclass
+class DownloadProgress:
+    """Represents progress for a single download URL."""
+
+    url: str
+    path: str
+    bytes_downloaded: int
+    total_bytes: Optional[int]
+    done: bool = False
+    skipped: bool = False
 
 
 class HarmonyClient:
-    """Client for NASA Harmony server-side subsetting API.
-    
-    Harmony provides cloud-based processing for NASA Earthdata collections,
-    enabling spatial, temporal, and variable subsetting before download.
-    
-    Example:
-        client = HarmonyClient(token="your_earthdata_token")
-        
-        # Check if a collection supports Harmony subsetting
-        caps = client.get_capabilities("C1234567890-PROVIDER")
-        if caps.get("variableSubset"):
-            # Collection supports variable subsetting
-            pass
-        
-        # Submit a subset request
-        job = client.subset(
-            collection_id="C1234567890-PROVIDER",
-            bbox=(-180, -90, 180, 90),
-            temporal=("2023-01-01T00:00:00Z", "2023-12-31T23:59:59Z"),
-            variables=["ssha", "mdt"],
-            granule_ids=["G1234567890-PROVIDER"],
-        )
-        
-        # Wait for completion and get results
-        result = client.wait_for_job(job.job_id)
-        urls = result.output_urls
-    """
     
     BASE_URL = "https://harmony.earthdata.nasa.gov"
     
@@ -79,7 +90,6 @@ class HarmonyClient:
         token: str,
         session: Optional[requests.Session] = None,
         timeout: int = 60,
-        skip_preview: bool = True,
     ) -> None:
         """Initialize Harmony client.
         
@@ -87,73 +97,58 @@ class HarmonyClient:
             token: NASA Earthdata bearer token.
             session: Optional requests session for connection pooling.
             timeout: Request timeout in seconds.
-            skip_preview: If True, skip preview for large requests (>300 granules).
-                         Defaults to True for automation use cases.
         """
         self._token = token
         self._session = session or requests.Session()
         self._timeout = timeout
-        self._skip_preview = skip_preview
         
         self._session.headers.update({
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         })
+
+    def subset_and_download(
+        self,
+        params: GranuleSearchParams,
+        destination: Path,
+        *,
+        poll_interval: float = 5.0,
+        max_wait: float = 3600.0,
+        skip_existing: bool = True,
+        on_job_update: Optional[Callable[[ProcessingJob], None]] = None,
+        on_download_progress: Optional[Callable[[DownloadProgress], None]] = None,
+    ) -> List[Path]:
+        job = self._request_subset(
+            collection_id=params.collection_id,
+            bbox=params.bbox,
+            temporal=params.temporal,
+        )
+        
+        if on_job_update:
+            on_job_update(job)
+        
+        completed_job = self._await_job_completion(
+            job.job_id,
+            poll_interval=poll_interval,
+            max_wait=max_wait,
+            on_job_update=on_job_update,
+        )
+        
+        return self.download_results(
+            completed_job,
+            str(destination),
+            skip_existing=skip_existing,
+            on_download_progress=on_download_progress,
+        )        
     
-    def get_capabilities(self, collection_id: str) -> Dict[str, Any]:
-        """Get Harmony capabilities for a collection.
-        
-        Args:
-            collection_id: CMR collection concept ID.
-            
-        Returns:
-            Dictionary with capability flags:
-                - variableSubset: bool - supports variable selection
-                - bboxSubset: bool - supports bounding box subsetting
-                - shapeSubset: bool - supports shapefile subsetting  
-                - concatenate: bool - supports output concatenation
-                - outputFormats: List[str] - supported output formats
-        """
-        url = f"{self.BASE_URL}/capabilities"
-        params = {"collectionId": collection_id}
-        
-        response = self._session.get(url, params=params, timeout=self._timeout)
-        response.raise_for_status()
-        
-        return response.json()
-    
-    def supports_collection(self, collection_id: str) -> bool:
-        """Check if a collection is configured for Harmony processing.
-        
-        Args:
-            collection_id: CMR collection concept ID.
-            
-        Returns:
-            True if the collection supports at least one Harmony capability.
-        """
-        try:
-            caps = self.get_capabilities(collection_id)
-            return any([
-                caps.get("variableSubset", False),
-                caps.get("bboxSubset", False),
-                caps.get("shapeSubset", False),
-            ])
-        except requests.HTTPError:
-            return False
-    
-    def subset(
+    def _request_subset(
         self,
         collection_id: str,
         bbox: Optional[Tuple[float, float, float, float]] = None,
         temporal: Optional[Tuple[str, str]] = None,
-        variables: Optional[List[str]] = None,
-        granule_ids: Optional[List[str]] = None,
-        granule_names: Optional[List[str]] = None,
-        output_format: Optional[str] = None,
-        concatenate: bool = False,
-        max_results: Optional[int] = None,
-    ) -> HarmonyJob:
-        """Submit a subsetting request to Harmony.
+    ) -> ProcessingJob:
+        """
+        Submit a subsetting request to Harmony. Assumes the collection supports Harmony subsetting.
         
         Uses the OGC Coverages API for subsetting requests.
         
@@ -161,25 +156,14 @@ class HarmonyClient:
             collection_id: CMR collection concept ID.
             bbox: Bounding box as (west, south, east, north) in degrees.
             temporal: Time range as (start, end) ISO 8601 strings.
-            variables: List of variable names to include in output.
-            granule_ids: Specific granule concept IDs to process.
-            granule_names: Specific granule names/filenames to process.
-            output_format: Desired output format (e.g., "application/netcdf4").
-            concatenate: If True, concatenate outputs into single file.
-            max_results: Maximum number of granules to process.
             
         Returns:
             HarmonyJob with job status and metadata.
         """
-        # Build the variable path for OGC Coverages API
-        if variables:
-            variable_path = ",".join(variables)
-        else:
-            variable_path = "all"
-        
+        variables = "all" # comma-separated variables or "all"
         url = (
             f"{self.BASE_URL}/{collection_id}/ogc-api-coverages/1.0.0/"
-            f"collections/{variable_path}/coverage/rangeset"
+            f"collections/{variables}/coverage/rangeset"
         )
         
         # Build query parameters
@@ -198,23 +182,6 @@ class HarmonyClient:
                 params["subset"] = []
             params["subset"].append(f'time("{start}":"{end}")')
         
-        if granule_ids:
-            params["granuleId"] = granule_ids
-        
-        if granule_names:
-            params["granuleName"] = granule_names
-        
-        if output_format:
-            params["format"] = output_format
-        
-        if concatenate:
-            params["concatenate"] = "true"
-        
-        if max_results:
-            params["maxResults"] = max_results
-        
-        if self._skip_preview:
-            params["skipPreview"] = "true"
         
         # Submit request
         response = self._session.get(url, params=params, timeout=self._timeout)
@@ -222,7 +189,7 @@ class HarmonyClient:
         
         return self._parse_job_response(response.json())
     
-    def get_job_status(self, job_id: str) -> HarmonyJob:
+    def get_job_status(self, job_id: str) -> ProcessingJob:
         """Get current status of a Harmony job.
         
         Args:
@@ -238,13 +205,15 @@ class HarmonyClient:
         
         return self._parse_job_response(response.json())
     
-    def wait_for_job(
+    def _await_job_completion(
         self,
         job_id: str,
         poll_interval: float = 5.0,
         max_wait: float = 3600.0,
-    ) -> HarmonyJob:
-        """Wait for a Harmony job to complete.
+        on_job_update: Optional[Callable[[ProcessingJob], None]] = None,
+    ) -> ProcessingJob:
+        """
+        Wait for a Harmony job to complete.
         
         Args:
             job_id: Harmony job ID.
@@ -259,9 +228,16 @@ class HarmonyClient:
             RuntimeError: If job fails.
         """
         start_time = time.time()
+        last_state: Optional[Tuple[str, int, str]] = None
         
         while True:
             job = self.get_job_status(job_id)
+            
+            if on_job_update:
+                state = (job.status, job.progress, job.updated_at)
+                if state != last_state:
+                    on_job_update(job)
+                    last_state = state
             
             if job.is_complete:
                 return job
@@ -278,19 +254,29 @@ class HarmonyClient:
                 )
             
             time.sleep(poll_interval)
+
+    def cancel_job(self, job: ProcessingJob | str) -> ProcessingJob:
+        """Cancel a Harmony job using the job's cancel link."""
+        return self._follow_job_link(job, rel="canceler", action="cancel")
+
+    def pause_job(self, job: ProcessingJob | str) -> ProcessingJob:
+        """Pause a Harmony job using the job's pause link."""
+        return self._follow_job_link(job, rel="pauser", action="pause")
     
     def download_results(
         self,
-        job: HarmonyJob,
+        job: ProcessingJob,
         destination: str,
         skip_existing: bool = True,
-    ) -> List[str]:
+        on_download_progress: Optional[Callable[[DownloadProgress], None]] = None,
+    ) -> List[Path]:
         """Download output files from a completed Harmony job.
         
         Args:
             job: Completed HarmonyJob.
             destination: Local directory to save files.
             skip_existing: Skip files that already exist locally.
+            on_download_progress: Optional callback for download progress updates.
             
         Returns:
             List of downloaded file paths.
@@ -300,31 +286,88 @@ class HarmonyClient:
         dest_path = Path(destination)
         dest_path.mkdir(parents=True, exist_ok=True)
         
-        downloaded = []
+        downloaded: List[Path] = []
         
         for url in job.output_urls:
             filename = url.split("/")[-1].split("?")[0]
             local_path = dest_path / filename
             
             if skip_existing and local_path.exists():
-                downloaded.append(str(local_path))
+                downloaded.append(local_path)
+                if on_download_progress:
+                    size = local_path.stat().st_size
+                    on_download_progress(
+                        DownloadProgress(
+                            url=url,
+                            path=str(local_path),
+                            bytes_downloaded=size,
+                            total_bytes=size,
+                            done=True,
+                            skipped=True,
+                        )
+                    )
                 continue
             
             response = self._session.get(url, stream=True, timeout=self._timeout)
             response.raise_for_status()
             
+            total_bytes: Optional[int] = None
+            if response.headers.get("Content-Length"):
+                try:
+                    total_bytes = int(response.headers["Content-Length"])
+                except ValueError:
+                    total_bytes = None
+            
+            downloaded_bytes = 0
             with open(local_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
+                        downloaded_bytes += len(chunk)
+                        if on_download_progress:
+                            on_download_progress(
+                                DownloadProgress(
+                                    url=url,
+                                    path=str(local_path),
+                                    bytes_downloaded=downloaded_bytes,
+                                    total_bytes=total_bytes,
+                                )
+                            )
             
-            downloaded.append(str(local_path))
+            if on_download_progress:
+                on_download_progress(
+                    DownloadProgress(
+                        url=url,
+                        path=str(local_path),
+                        bytes_downloaded=downloaded_bytes,
+                        total_bytes=total_bytes,
+                        done=True,
+                    )
+                )
+            
+            downloaded.append(local_path)
         
         return downloaded
+
+    def _follow_job_link(self, job: ProcessingJob | str, rel: str, action: str) -> ProcessingJob:
+        job_info = job if isinstance(job, ProcessingJob) else self.get_job_status(job)
+        link = job_info.get_link(rel)
+        if not link or not link.get("href"):
+            raise ValueError(
+                f"Harmony job {job_info.job_id} does not expose a {action} link."
+            )
+        
+        response = self._session.post(link["href"], timeout=self._timeout)
+        response.raise_for_status()
+        
+        if response.content:
+            return self._parse_job_response(response.json())
+        
+        return self.get_job_status(job_info.job_id)
     
-    def _parse_job_response(self, data: Dict[str, Any]) -> HarmonyJob:
+    def _parse_job_response(self, data: Dict[str, Any]) -> ProcessingJob:
         """Parse Harmony API response into HarmonyJob."""
-        return HarmonyJob(
+        return ProcessingJob(
             job_id=data.get("jobID", ""),
             status=data.get("status", "unknown"),
             message=data.get("message", ""),
@@ -332,4 +375,9 @@ class HarmonyClient:
             links=data.get("links", []),
             created_at=data.get("createdAt", ""),
             updated_at=data.get("updatedAt", ""),
+            username=data.get("username", ""),
+            request_url=data.get("request", ""),
+            data_expiration=data.get("dataExpiration", ""),
+            num_input_granules=data.get("numInputGranules"),
+            labels=data.get("labels") or [],
         )
