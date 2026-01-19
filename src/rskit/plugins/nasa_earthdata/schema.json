@@ -13,7 +13,7 @@
       "cloud_cover",
       "sort_key",
       "max_granules",
-      "download_dir",
+      "variables",
       "drop_nan_lines"
     ],
     "field_descriptions": {
@@ -21,7 +21,7 @@
       "cloud_cover": "Tuple of (min_percent, max_percent) for cloud cover filtering.",
       "sort_key": "CMR sort key (e.g., '-start_date').",
       "max_granules": "Maximum number of granules to return/download.",
-      "download_dir": "Override download destination directory.",
+      "variables": "List of variable names to subset during client-side processing (Harmony ignores variable subsetting).",
       "drop_nan_lines": "Drop all-NaN lines during client-side subsetting."
     },
     "notes": [
