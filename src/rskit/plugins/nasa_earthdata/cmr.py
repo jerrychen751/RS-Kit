@@ -35,7 +35,7 @@ class CmrClient:
         if token:
             self._session.headers.update({"Authorization": f"Bearer {token}"})
 
-    # Public API methods
+    # --- Collection Metadata ---
     def resolve_collection_concept_id(
         self,
         doi: Optional[str] = None,
@@ -43,7 +43,7 @@ class CmrClient:
         version: Optional[str] = None,
     ) -> str:
         """
-        Resolve collection identifiers (any of DOI, short_name, version) to a concept ID.
+        Resolve collection identifiers (some combination of DOI, short_name, version) to a concept ID.
 
         Args:
             doi: Collection DOI (optional).
@@ -110,6 +110,8 @@ class CmrClient:
             )
 
         return entries
+
+    # --- Data Granule Metadata ---        
 
     def search_granules(
         self,
@@ -189,76 +191,40 @@ class CmrClient:
     def get_collection_variables(
         self,
         collection_concept_id: str,
-        keyword: Optional[str] = None,
-        umm: bool = False,
     ) -> List[dict]:
         """
-        Get variables associated with a collection and their metadata. Keyword match is done case-insensitively with variable name/definition.
+        Get raw UMM metadata for variables associated with a collection.
 
         Args:
             collection_concept_id: CMR collection concept ID.
-            keyword: Optional keyword filter for variable name/definition.
-            umm: When True, return the raw UMM metadata for each variable.
 
         Returns:
-            List of variable metadata dictionaries.
+            List of raw UMM metadata dictionaries.
         """
         if not collection_concept_id:
             raise ValueError("collection_concept_id is required to fetch collection variables.")
-        
+
         # Get variable concept IDs from collection associations
         variable_concept_ids = self._get_collection_variable_concept_ids(collection_concept_id)
-        
+
         if not variable_concept_ids:
             return []
-        
-        # Fetch metadata for each variable using variable concept ids
+
         collected: List[dict] = []
-        
+
         for var_id in variable_concept_ids:
             try:
-                umm_meta = self._get_variable_umm(var_id)
-                if not umm_meta:
-                    continue
-
-                # Apply keyword filter if provided
-                if keyword:
-                    keyword_lower = keyword.lower()
-                    name_match = keyword_lower in umm_meta.get("Name", "").lower()
-                    long_name_match = keyword_lower in umm_meta.get("LongName", "").lower()
-                    definition_match = keyword_lower in umm_meta.get("Definition", "").lower()
-
-                    if not (name_match or long_name_match or definition_match):
-                        continue
-
-                if umm:
-                    collected.append(umm_meta)
-                else:
-                    collected.append(
-                        {
-                            "name": umm_meta.get("Name", ""),
-                            "long_name": umm_meta.get("LongName", ""),
-                            "definition": umm_meta.get("Definition", ""),
-                            "units": umm_meta.get("Units", ""),
-                            "data_type": umm_meta.get("DataType", ""),
-                            "dimensions": [
-                                d.get("Name", "")
-                                for d in umm_meta.get("Dimensions", [])
-                            ],
-                            "scale": umm_meta.get("Scale"),
-                            "offset": umm_meta.get("Offset"),
-                            "fill_value": (
-                                umm_meta.get("FillValues", [{}])[0].get("Value")
-                                if umm_meta.get("FillValues")
-                                else None
-                            ),
-                            "concept_id": var_id,
-                        }
-                    )
+                url = f"https://cmr.earthdata.nasa.gov/search/concepts/{var_id}"
+                headers = {"Accept": "application/vnd.nasa.cmr.umm+json"}
+                response = self._session.get(url, headers=headers, timeout=self._timeout)
+                response.raise_for_status()
+                meta = response.json()
+                if meta:
+                    collected.append(meta)
             except requests.RequestException:
                 # Skip variables that fail to fetch
                 continue
-        
+
         return collected
     
     def _get_collection_variable_concept_ids(self, collection_concept_id: str) -> List[str]:
@@ -281,19 +247,30 @@ class CmrClient:
         associations = meta.get("associations", {})
         return associations.get("variables", [])
     
-    def _get_variable_umm(self, variable_concept_id: str) -> Optional[dict]:
+    def download_granule(
+        self,
+        url: str,
+        destination: Path,
+        skip_existing: bool = False,
+    ) -> Path:
         """
-        Fetch metadata for a single variable.
+        Download a granule to the destination directory, creating it if it does not exist.
         """
-        url = f"https://cmr.earthdata.nasa.gov/search/concepts/{variable_concept_id}"
-        headers = {"Accept": "application/vnd.nasa.cmr.umm+json"}
-        
-        response = self._session.get(url, headers=headers, timeout=self._timeout)
+        destination.mkdir(parents=True, exist_ok=True)
+        filename = url.split("/")[-1]
+        target = destination / filename
+        if skip_existing and target.exists():
+            return target
+
+        response = self._session.get(url, stream=True, timeout=self._timeout)
         response.raise_for_status()
+
+        with open(target, "wb") as file_obj:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    file_obj.write(chunk)
         
-        meta = response.json()
-        
-        return meta
+        return target
 
     def download_granules(
         self,
@@ -305,29 +282,13 @@ class CmrClient:
         """
         Download granules to the destination directory.
         """
-        destination.mkdir(parents=True, exist_ok=True)
         downloaded: List[Path] = []
 
         for idx, url in enumerate(urls, start=1):
             if limit and idx > limit:
                 break
-
-            filename = url.split("/")[-1]
-            target = destination / filename
-
-            if skip_existing and target.exists():
-                downloaded.append(target)
-                continue
-
-            response = self._session.get(url, stream=True, timeout=self._timeout)
-            response.raise_for_status()
-
-            with open(target, "wb") as file_obj:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        file_obj.write(chunk)
-
-            downloaded.append(target)
+            path = self.download_granule(url, destination, skip_existing)
+            downloaded.append(path)
 
         return downloaded
 
