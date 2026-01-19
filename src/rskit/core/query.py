@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
-import xarray as xr
 from dateutil.parser import parse as parse_date
 
 from .executor import QueryExecutor
@@ -111,10 +110,13 @@ class Query:
         return self
     
     def with_params(self, **params) -> Query:
-        """Add plugin-specific query parameters.
+        """
+        Add plugin-specific query parameters, some of which may be required by the active data source.
+
+        Use rs.plugins.get_params_schema(data_source_str) to obtain a list of required and optional query params.
         
         Args:
-            **params: Plugin-specific parameters required by the active data source.
+            **params: Plugin-specific parameters.
             
         Returns:
             (Query): Query instance for method chaining.
@@ -140,30 +142,16 @@ class Query:
             skip_existing=skip_existing,
         )
 
-    def fetch(
-        self,
-        destination: Optional[Path] = None,
-        *,
-        limit: Optional[int] = None,
-        skip_existing: bool = True,
-        **plugin_kwargs: Any,
-    ) -> xr.Dataset:
-        """Download (if needed) and load data into an xarray Dataset.
-
-        Notes:
-            Additional keyword arguments are forwarded to the active source plugin's
-            `fetch()` implementation. This enables plugin-specific fetch kwargs such as
-            NASA Earthdata Harmony subsetting (e.g., `variables`).
-            Plugin-specific query params should be set via `with_params(...)`.
+    def require_extents(self) -> tuple[SpatialExtent, TemporalExtent]:
         """
-        executor = QueryExecutor()
-        return executor.fetch(
-            self,
-            destination=destination,
-            limit=limit,
-            skip_existing=skip_existing,
-            **plugin_kwargs,
-        )
+        Ensures that both TemporalExtent and SpatialExtent objects have been associated with the query.
+        """
+        if self._spatial_extent is None:
+            raise ValueError("Use .region() and pass in lon/lat ranges or a bbox tuple to attach a SpatialExtent object to the query first.")
+        if self._temporal_extent is None:
+            raise ValueError("Use .time() to pass in start and end times to attach a TemporalExtent object to the query first.")
+        
+        return self._spatial_extent, self._temporal_extent
 
     def estimate_size(self) -> Optional[int]:
         """Estimate query cost before execution.
