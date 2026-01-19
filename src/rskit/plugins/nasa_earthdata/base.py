@@ -319,7 +319,6 @@ class NasaEarthdata(DataSourcePlugin):
                 umm,
                 mask_out_of_bounds=mask_out_of_bounds,
             )  # if unsuccessful, an error will be raised
-            print(f"Downloaded and subsetted {str(filepath)}")
             downloaded.append(filepath)
         return [str(fp) for fp in downloaded]
 

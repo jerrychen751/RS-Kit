@@ -101,19 +101,12 @@ def subset_granule(
                 # Applies indexer mapping across each xr.DataArray in container
                 # Default behavior is to raise if some group doesn't contain dim
                 subset = ds.isel(indexers, missing_dims='ignore') if indexers else ds
-                if mask_out_of_bounds:
-                    if spatial_mask is None:
-                        print(f"[subset_granule] No spatial mask for group '{gpath}', skipping mask.")
-                    else:
-                        mask_indexers = {dim: idx for dim, idx in indexers.items() if dim in spatial_mask.dims}
-                        mask_to_apply = spatial_mask
-                        if mask_indexers:
-                            mask_to_apply = spatial_mask.isel(mask_indexers)
-                        print(
-                            "[subset_granule] Applying spatial mask for group "
-                            f"'{gpath}' dims={tuple(mask_to_apply.dims)}"
-                        )
-                        subset = _apply_spatial_mask(subset, ds, mask_to_apply)
+                if mask_out_of_bounds and spatial_mask is not None:
+                    mask_indexers = {dim: idx for dim, idx in indexers.items() if dim in spatial_mask.dims}
+                    mask_to_apply = spatial_mask
+                    if mask_indexers:
+                        mask_to_apply = spatial_mask.isel(mask_indexers)
+                    subset = _apply_spatial_mask(subset, ds, mask_to_apply)
                 group = None if gpath in ('/', '') else gpath.lstrip('/')
                 encoding = _build_encoding(ds, subset)
                 subset.to_netcdf(
