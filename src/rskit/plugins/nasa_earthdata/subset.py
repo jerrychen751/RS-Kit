@@ -30,7 +30,7 @@ def subset_granule(
     variable_umms: list[dict[str, Any]],
     *,
     mask_out_of_bounds: bool = False,
-) -> Path:
+) -> Path | None:
     """
     Subset a dataset file in place using SubsettingParams. Subsets data variables which have the same dimensions as spatial/temporal extents and leaving the rest of the data variables. Although spatial extents provided by SubsettingParams are from -180 to 180, the actual dataset will be returned using its original longitude convention.
 
@@ -38,6 +38,8 @@ def subset_granule(
     null after subsetting while preserving the 2D grid structure. Uses each
     variable's encoded _FillValue when present, otherwise falls back to NaN
     (or NaT for datetime/timedelta variables).
+
+    If there is no spatial or temporal overlap between the data granule and the provided params, returns None.
     """
     if not filepath.exists():
         raise FileNotFoundError(f"Dataset file not found: {filepath}")
@@ -51,7 +53,7 @@ def subset_granule(
     # Validate that required coordinates exist in at some group
     has_lon = has_lat = has_time = False
     for gpath in groups:
-        with xr.open_dataset(filepath, group=gpath) as ds:
+        with xr.open_dataset(filepath, group=gpath, decode_timedelta=True) as ds:
             has_lon = has_lon or _find_coord(ds, "longitude", "lon", "longitude") is not None
             has_lat = has_lat or _find_coord(ds, "latitude", "lat", "latitude") is not None
             has_time = has_time or _find_coord(ds, "time", "time", "datetime") is not None
@@ -72,7 +74,7 @@ def subset_granule(
     spatial_mask: SpatialMask | None = None
     if mask_out_of_bounds:
         for gpath in groups:
-            with xr.open_dataset(filepath, group=gpath) as ds:
+            with xr.open_dataset(filepath, group=gpath, decode_timedelta=True) as ds:
                 lon = _find_coord(ds, "longitude", "lon", "longitude")
                 lat = _find_coord(ds, "latitude", "lat", "latitude")
                 if lon is None or lat is None:
@@ -84,7 +86,7 @@ def subset_granule(
     is_first = True # used when writing out to a file
     try:
         for gpath in groups:
-            with xr.open_dataset(filepath, group=gpath) as ds:
+            with xr.open_dataset(filepath, group=gpath, decode_timedelta=True) as ds:
                 if mask_out_of_bounds and spatial_indexers is not None:
                     indexers: Indexers = {}
                     indexers = _merge_indexers(indexers, spatial_indexers)
@@ -97,6 +99,16 @@ def subset_granule(
                         params,
                         lon_convention=lon_convention,
                     )
+                
+                # Safety guard against empty indexers and all-false spatial mask
+                empty_indexers = any(idx.size == 0 for idx in indexers.values())
+                mask_all_false = (
+                    spatial_mask is not None and
+                    not spatial_mask.to_numpy().any()
+                )
+                if empty_indexers or mask_all_false:
+                    print(f"Skipping {filepath}: there is either no spatial or no temporal overlap detected")
+                    return
 
                 # Applies indexer mapping across each xr.DataArray in container
                 # Default behavior is to raise if some group doesn't contain dim
@@ -494,7 +506,7 @@ def _determine_lon_convention(
             lon_max = ranges[0].get("Max")
     else: # check dataset metadata
         for gpath in groups:
-            with xr.open_dataset(filepath, group=gpath) as ds:
+            with xr.open_dataset(filepath, group=gpath, decode_timedelta=True) as ds:
                 try:
                     lon = _require_coord(ds, "longitude", "lon", "longitude")
                 except ValueError:
