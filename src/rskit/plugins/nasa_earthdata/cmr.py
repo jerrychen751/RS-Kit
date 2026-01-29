@@ -4,6 +4,7 @@ Utilities for interacting with NASA's Common Metadata Repository (CMR) API.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -28,12 +29,34 @@ class CmrClient:
         session: Optional[requests.Session] = None,
         timeout: int = 30,
     ) -> None:
-        self._session = session or requests.Session()
+        self._provided_session = session
         self._timeout = timeout
         self._token = token
+        self._local = threading.local()
 
-        if token:
-            self._session.headers.update({"Authorization": f"Bearer {token}"})
+        # Eagerly build the main-thread session so existing
+        # single-threaded callers see no change in behaviour.
+        if session:
+            self._local.session = session
+        else:
+            s = requests.Session()
+            if token:
+                s.headers.update({"Authorization": f"Bearer {token}"})
+            self._local.session = s
+
+    @property
+    def _session(self) -> requests.Session:
+        """Return a per-thread ``requests.Session``.
+
+        The main thread gets the session created in ``__init__``.
+        Worker threads get a lazily-created copy with the same auth headers.
+        """
+        if not hasattr(self._local, "session"):
+            s = requests.Session()
+            if self._token:
+                s.headers.update({"Authorization": f"Bearer {self._token}"})
+            self._local.session = s
+        return self._local.session
 
     # --- Collection Metadata ---
     def resolve_collection_concept_id(
