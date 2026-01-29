@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import requests
 
@@ -14,6 +15,7 @@ from ...utils.downloads import ensure_downloads_directory
 from .cmr import CmrClient, CollectionInfo
 from .harmony import HarmonyClient
 from .subset import subset_granule, SubsettingParams
+from ...utils.regridding import regrid_granule
 
 @dataclass
 class GranuleSearchParams:
@@ -223,10 +225,11 @@ class NasaEarthdata(DataSourcePlugin):
         *,
         limit: Optional[int] = None,
         skip_existing: bool = True,
+        max_workers: int = 1,
     ) -> List[str]:
         """
         Downloads and saves data granules based on the query parameters.
-        
+
         Note: This will download the full data granules without subsetting. Any data granule containing data within the defined query spatial and temporal extends will be downloaded.
 
         Args:
@@ -234,6 +237,7 @@ class NasaEarthdata(DataSourcePlugin):
             destination (Optional[Path]): Absolute path to the directory to save downloaded files. If None, uses the user's Downloads directory under the rskit-nasa_earthdata folder.
             skip_existing (bool): Skip files that already exist in the destination directory. If false, will overwrite existing files.
             limit (Optional[int]): Maximum number of granules to download and process.
+            max_workers (int): Number of parallel download threads. Defaults to 1 (sequential).
         """
         params = self._normalize_granule_search_params(query, limit)
         destination = self._resolve_downloads_directory(destination)
@@ -241,13 +245,25 @@ class NasaEarthdata(DataSourcePlugin):
 
         if not download_urls:
             return []
-                
-        downloaded = self._client.download_granules(
-            download_urls,
-            destination,
-            limit=params.limit,
-            skip_existing=skip_existing,
-        )
+
+        if params.limit:
+            download_urls = download_urls[: params.limit]
+
+        if max_workers <= 1:
+            downloaded = self._client.download_granules(
+                download_urls,
+                destination,
+                limit=params.limit,
+                skip_existing=skip_existing,
+            )
+            return [str(fp) for fp in downloaded]
+
+        workers = min(max_workers, len(download_urls))
+        futures = []
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for url in download_urls:
+                futures.append(pool.submit(self._client.download_granule, url, destination, skip_existing))
+            downloaded = [f.result() for f in futures]
         return [str(fp) for fp in downloaded]
 
     def download_subsetted_data(
@@ -258,6 +274,10 @@ class NasaEarthdata(DataSourcePlugin):
         limit: Optional[int] = None,
         skip_existing: bool = True,
         mask_out_of_bounds: bool = False,
+        regrid_resolution: Optional[float] = None,
+        regrid_method: Literal["nearest", "bilinear"] = "nearest",
+        regrid_radius: float = 50_000,
+        max_workers: int = 1,
     ) -> List[str]:
         """
         Downloads, subsets, and saves data granules based on the query parameters.
@@ -270,6 +290,10 @@ class NasaEarthdata(DataSourcePlugin):
             skip_existing (bool): Skip files that already exist in the destination directory. If false, will overwrite existing files.
             limit (Optional[int]): Maximum number of granules to download and process.
             mask_out_of_bounds (bool): If longitude and latitude within the dataset are 2D, the default behavior is to keep the entire row/col as long as at least 1 value is inside of specified spatial extents. If enabled to True, the row/col will still be kept but out-of-bounds data will use the fill value specified in the original dataset's encoding.
+            regrid_resolution (Optional[float]): If provided, regrid swath data onto a regular lat/lon grid at this resolution (degrees). Skipped for data that already has 1D coordinates.
+            regrid_method (str): Resampling method for regridding — "nearest" or "bilinear". Defaults to "nearest".
+            regrid_radius (float): Maximum distance in meters that a source swath pixel can reach to fill a target grid cell. Defaults to 50,000 (50 km).
+            max_workers (int): Number of parallel download/subset threads. Defaults to 1 (sequential).
 
         Returns:
             List[Path]: List of filepaths of downloaded files. Empty if no data granules patching query spatial/temporal extents were found using CMR API.
@@ -282,7 +306,7 @@ class NasaEarthdata(DataSourcePlugin):
         collection_id = query.params.get("collection_concept_id")
         if not collection_id:
             raise ValueError("Missing collection concept id in query params")
-        
+
         # Try subsetting with NASA Harmony API
         if self.supports_harmony_spatial_subsetting(collection_id) and self.supports_harmony_temporal_subsetting(collection_id):
             try:
@@ -306,21 +330,83 @@ class NasaEarthdata(DataSourcePlugin):
             temporal=temporal_extent,
             spatial=spatial_extent,
         )
-        
+
         # Upon any failed subsetting, an error will be raised and this function will stop immediately
         umm = self._client.get_collection_variables(collection_id)
 
-        downloaded: List[Path] = []
-        for url in download_urls:
-            filepath = self._client.download_granule(url, destination, skip_existing)
-            subset_granule(
-                filepath,
-                subsetting_params,
-                umm,
-                mask_out_of_bounds=mask_out_of_bounds,
-            )  # if unsuccessful, an error will be raised
-            downloaded.append(filepath)
+        if max_workers <= 1:
+            downloaded: List[Path] = []
+            for url in download_urls:
+                filepath = self._client.download_granule(url, destination, skip_existing)
+                subset_granule(
+                    filepath,
+                    subsetting_params,
+                    umm,
+                    mask_out_of_bounds=mask_out_of_bounds,
+                )
+                if regrid_resolution is not None:
+                    regrid_granule(
+                        filepath,
+                        spatial_extent,
+                        regrid_resolution,
+                        method=regrid_method,
+                        radius_of_influence=regrid_radius,
+                    )
+                downloaded.append(filepath)
+            return [str(fp) for fp in downloaded]
+
+        workers = min(max_workers, len(download_urls))
+        futures = []
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for url in download_urls:
+                futures.append(
+                    pool.submit(
+                        self._process_granule,
+                        url,
+                        destination,
+                        skip_existing,
+                        subsetting_params,
+                        umm,
+                        mask_out_of_bounds,
+                        spatial_extent,
+                        regrid_resolution,
+                        regrid_method,
+                        regrid_radius,
+                    )
+                )
+            downloaded = [f.result() for f in futures]
         return [str(fp) for fp in downloaded]
+
+    def _process_granule(
+        self,
+        url: str,
+        destination: Path,
+        skip_existing: bool,
+        subsetting_params: SubsettingParams,
+        umm: List[Dict[str, Any]],
+        mask_out_of_bounds: bool,
+        spatial_extent: Any,
+        regrid_resolution: Optional[float],
+        regrid_method: Literal["nearest", "bilinear"],
+        regrid_radius: float,
+    ) -> Path:
+        """Download, subset, and optionally regrid a single granule."""
+        filepath = self._client.download_granule(url, destination, skip_existing)
+        subset_granule(
+            filepath,
+            subsetting_params,
+            umm,
+            mask_out_of_bounds=mask_out_of_bounds,
+        )
+        if regrid_resolution is not None:
+            regrid_granule(
+                filepath,
+                spatial_extent,
+                regrid_resolution,
+                method=regrid_method,
+                radius_of_influence=regrid_radius,
+            )
+        return filepath
 
     # Private helper methods
     def _normalize_granule_search_params(
